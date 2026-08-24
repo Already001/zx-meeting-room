@@ -56,7 +56,7 @@ export const bootstrapAuthFromUrl = () => {
   // 落盘之后再清理地址栏里的敏感参数，避免明文 token 残留（Referer/日志泄露）
   if (token || corpId || clientType) {
     const u = new URL(location.href);
-    ["token", "refreshToken", "corpId"].forEach((k) => u.searchParams.delete(k));
+    ["token", "refreshToken", "corpId", "clientType"].forEach((k) => u.searchParams.delete(k));
     history.replaceState(null, "", u.toString());
   }
 

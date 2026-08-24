@@ -6,11 +6,14 @@ import useMobileEnv from "@/use/useMobileEnv";
 
 // 本文件是显式 import（非模板里的 AutoImport/Components 按需注册），
 // 三处 main.js 已去掉整包 CSS，这里必须自己补上用到的组件样式，否则弹窗会裸奔。
-import "element-plus/theme-chalk/el-message.css";
-import "element-plus/theme-chalk/el-message-box.css";
-import "element-plus/theme-chalk/el-overlay.css";
+// 用 element-plus 自带的按需样式入口（而非手挑 theme-chalk/*.css），
+// 因为 message-box 依赖 base/input/button/overlay，手挑容易漏（漏过 base.css 会导致
+// 全部 --el-* 设计变量缺失，弹框变透明底裸按钮）；与 vant 侧写法保持对称。
+import "element-plus/es/components/message/style/css";
+import "element-plus/es/components/message-box/style/css";
 import "vant/es/toast/style";
 import "vant/es/dialog/style";
+import "./dialog-el-message-box.css";
 
 const { mobileEnv } = useMobileEnv();
 

@@ -1,7 +1,5 @@
 import axios from "axios";
 import { getToken, setToken, getCorpId, showToastError } from "@/utils";
-import { useSessionStorage } from "@vueuse/core";
-import { unref } from "vue";
 
 let errorFlag = false;
 let IsRefrshToken = false; // 是否正在刷新 token
@@ -17,12 +15,11 @@ export const baseMap = {
 };
 
 // clientType 唯一取值入口是 bootstrapAuthFromUrl()（在各 main.js 挂载前调用），
-// 这里只读 sessionStorage，不再重复解析 URL——见 utils/index.js 顶部注释。
-const clientType = useSessionStorage("clientType", "app");
-
+// 这里不在模块加载时快照 sessionStorage（~pages 是静态 import，模块求值早于
+// bootstrapAuthFromUrl 落盘，快照会永远拿到空值兜底的 "app"），改成每次发请求时现读。
 export const setClientType = (v) => {
   if (v) {
-    clientType.value = v;
+    sessionStorage.setItem("clientType", v);
   }
 };
 
@@ -32,7 +29,6 @@ const http = axios.create({
   validateStatus: (status) => status < 400,
   headers: {
     "Content-Type": "application/json;charset=utf-8",
-    clientType,
     version: "v1"
   }
 });
@@ -40,7 +36,7 @@ const http = axios.create({
 export const insRequestArgs = [
   (request) => {
     retryRequest(request);
-    request.headers.clientType = unref(clientType);
+    request.headers.clientType = sessionStorage.getItem("clientType") || "app";
     if (
       request.url.indexOf("/refresh/token") === -1 &&
       request.url.indexOf("/app/login") === -1
@@ -63,7 +59,10 @@ http.interceptors.request.use(...insRequestArgs);
 
 export const insResponseArgs = [
   (response) => {
-    if (response.status === 200 && errorMsg.includes(response.data.code)) {
+    // 刷新接口自身返回的 O_T_00x 不能再走下面的排队/重试分支，否则会自等待
+    // （refreshToken() 复用同一个 http 实例，若不排除会在这里递归进队列）
+    const isRefreshCall = (response.config.url || "").indexOf("/refresh/token") !== -1;
+    if (response.status === 200 && !isRefreshCall && errorMsg.includes(response.data.code)) {
       if (response.data.code === "O_T_003") {
         if (!errorFlag) {
           errorFlag = true;

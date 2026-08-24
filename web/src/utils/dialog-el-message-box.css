@@ -1,0 +1,8 @@
+/* 覆盖 UnoCSS/Tailwind reset 的 `button,[type=button]{background-color:transparent}`。
+   该选择器与 `.el-button` 同为 (0,1,0)，reset 后注入时会盖掉官方 button.css 的蓝底；
+   提到 (0,2,0) 后与注入顺序无关。 */
+.el-message-box .el-button--primary {
+  background-color: var(--el-button-bg-color, var(--el-color-primary));
+  border-color: var(--el-button-border-color, var(--el-color-primary));
+  color: var(--el-button-text-color, #fff);
+}
