@@ -4,6 +4,14 @@ import { showSuccessToast, showFailToast, showDialog } from "vant";
 import { fullscreenElement } from "@/use/useElementState";
 import useMobileEnv from "@/use/useMobileEnv";
 
+// 本文件是显式 import（非模板里的 AutoImport/Components 按需注册），
+// 三处 main.js 已去掉整包 CSS，这里必须自己补上用到的组件样式，否则弹窗会裸奔。
+import "element-plus/theme-chalk/el-message.css";
+import "element-plus/theme-chalk/el-message-box.css";
+import "element-plus/theme-chalk/el-overlay.css";
+import "vant/es/toast/style";
+import "vant/es/dialog/style";
+
 const { mobileEnv } = useMobileEnv();
 
 /** 成功提示 */
