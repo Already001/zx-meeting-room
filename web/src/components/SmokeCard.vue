@@ -14,7 +14,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { bootstrapAuthFromUrl } from "@/utils";
+import { getToken, getCorpId } from "@/utils";
 import { getHealth } from "@/server";
 
 defineProps({
@@ -24,9 +24,10 @@ defineProps({
 const buildTarget = __BUILD_TARGET__;
 const platform = window.__VITE_MPA_PLATFORM__ || "（main 入口无此标识）";
 
-const auth = bootstrapAuthFromUrl();
-const corpId = ref(auth.corpId);
-const tokenState = computed(() => (auth.token ? "已获取" : "无（可用 ?token= 注入）"));
+// 登录态引导已在各入口 main.js 挂载前统一调用 bootstrapAuthFromUrl()，
+// 这里只读展示，不再重复解析 URL。
+const corpId = ref(getCorpId());
+const tokenState = computed(() => (getToken() ? "已获取" : "无（可用 ?token= 注入）"));
 
 const healthText = ref("请求中…");
 

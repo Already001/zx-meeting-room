@@ -18,25 +18,15 @@ export const setToken = (data) => {
 /** 取企业 ID */
 export const getCorpId = () => sessionStorage.getItem("meetingCorpId");
 
-/** 解析 URL 查询参数 */
+/** 解析 URL 查询参数（用 URLSearchParams 按规范处理 + 与 %XX 转义） */
 export const getUrlParams = (data) => {
-  let url = "";
-  if (typeof data === "string") {
-    if (data.split("?").length && data.split("?")[1])
-      url = `?${data.split("?")[1]}`;
-  } else {
-    url = data.search;
-  }
+  const qs =
+    typeof data === "string" ? data.split("?")[1] || "" : data.search;
+  const sp = new URLSearchParams(qs);
   const result = new Map();
-  if (url) {
-    const params = url.substring(1).split("&");
-    for (let i = 0; i < params.length; i++) {
-      const temp = params[i].split("=");
-      const currentValue = result.get(temp[0]);
-      // URL 查询参数里 + 代表空格
-      const value = temp[1] ? temp[1].replace(/\+/g, " ") : temp[1];
-      result.set(temp[0], currentValue ?? value);
-    }
+  for (const [k] of sp) {
+    // 同名参数保留首个值，与旧实现行为一致
+    if (!result.has(k)) result.set(k, sp.get(k));
   }
   return result;
 };
@@ -61,6 +51,13 @@ export const bootstrapAuthFromUrl = () => {
   }
   if (clientType) {
     sessionStorage.setItem("clientType", clientType);
+  }
+
+  // 落盘之后再清理地址栏里的敏感参数，避免明文 token 残留（Referer/日志泄露）
+  if (token || corpId || clientType) {
+    const u = new URL(location.href);
+    ["token", "refreshToken", "corpId"].forEach((k) => u.searchParams.delete(k));
+    history.replaceState(null, "", u.toString());
   }
 
   return {

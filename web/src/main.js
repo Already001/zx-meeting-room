@@ -1,12 +1,17 @@
 import { createApp } from "vue";
 import App from "./App.vue";
-import { router } from "./router";
+import { createAppRouter } from "./router";
+import { bootstrapAuthFromUrl } from "./utils";
+import routes from "~pages";
 
 import "@unocss/reset/tailwind.css";
 import "uno.css";
 import "@vant/touch-emulator";
-import "element-plus/dist/index.css";
-import "vant/lib/index.css";
 import "./style.css";
+
+// 登录态引导属于应用启动步骤，必须在挂载前完成
+bootstrapAuthFromUrl();
+
+const router = createAppRouter(routes, "");
 
 createApp(App).use(router).mount("#app");
