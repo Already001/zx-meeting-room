@@ -13,7 +13,6 @@ import "element-plus/es/components/message/style/css";
 import "element-plus/es/components/message-box/style/css";
 import "vant/es/toast/style";
 import "vant/es/dialog/style";
-import "./dialog-el-message-box.css";
 
 const { mobileEnv } = useMobileEnv();
 
