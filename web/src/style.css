@@ -1,0 +1,15 @@
+/* 全局基础样式：三个入口共用 */
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+  color: #1f2329;
+  background: #f4f6f8;
+}
