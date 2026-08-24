@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <title>智能会议室</title>
+    <style>
+      #app {
+        -webkit-overflow-scrolling: touch;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+      }
+    </style>
+    <script>
+      // 低版本 WebView polyfill（安卓部分机型缺这几个方法）
+      (function () {
+        if (typeof Object.hasOwn !== "function") {
+          Object.defineProperty(Object, "hasOwn", {
+            value(target, property) {
+              return Object.prototype.hasOwnProperty.call(target, property);
+            },
+            configurable: true,
+            writable: true
+          });
+        }
+        if (typeof Array.prototype.at !== "function") {
+          Object.defineProperty(Array.prototype, "at", {
+            value(index) {
+              var target = Object(this);
+              var length = target.length >>> 0;
+              var normalizedIndex = Number(index) || 0;
+              if (normalizedIndex < 0) normalizedIndex += length;
+              if (normalizedIndex < 0 || normalizedIndex >= length)
+                return undefined;
+              return target[normalizedIndex];
+            },
+            configurable: true,
+            writable: true
+          });
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app" class="text-sm w-screen h-screen overflow-hidden"></div>
+    <script type="module" src="/src/mpa/mobile/main.js"></script>
+  </body>
+</html>

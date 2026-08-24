@@ -1,0 +1,52 @@
+{
+  "name": "@meeting/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:main": "cross-env BUILD_TARGET=main vite build",
+    "build:zx": "cross-env BUILD_TARGET=zx vite build",
+    "build:mobile": "cross-env BUILD_TARGET=m vite build",
+    "build": "rm -rf dist && vue-tsc && pnpm run build:main && pnpm run build:zx && pnpm run build:mobile && node mergeDist.js",
+    "build:main:prod": "cross-env BUILD_TARGET=main vite build --mode prod",
+    "build:zx:prod": "cross-env BUILD_TARGET=zx vite build --mode prod",
+    "build:mobile:prod": "cross-env BUILD_TARGET=m vite build --mode prod",
+    "build:prod": "rm -rf dist && vue-tsc && pnpm run build:main:prod && pnpm run build:zx:prod && pnpm run build:mobile:prod && node mergeDist.js",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "dayjs": "^1.11.19",
+    "element-plus": "^2.11.7",
+    "vant": "^4.9.21",
+    "vue": "^3.5.22",
+    "vue-router": "^4.6.3"
+  },
+  "devDependencies": {
+    "@iconify-json/carbon": "^1.2.15",
+    "@types/node": "^24.6.0",
+    "@unocss/preset-icons": "^66.5.10",
+    "@unocss/preset-wind3": "^66.5.6",
+    "@unocss/reset": "^66.5.6",
+    "@unocss/transformer-directives": "^66.5.6",
+    "@vant/touch-emulator": "^1.4.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/tsconfig": "^0.8.1",
+    "@vueuse/core": "^14.0.0",
+    "code-inspector-plugin": "^1.6.4",
+    "cross-env": "^10.1.0",
+    "fs-extra": "^11.3.2",
+    "is-mobile": "^5.0.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.9.3",
+    "unocss": "^66.5.6",
+    "unplugin-auto-import": "^20.2.0",
+    "unplugin-vue-components": "^30.0.0",
+    "vite": "^7.2.2",
+    "vite-plugin-pages": "^0.33.1",
+    "vue-tsc": "^3.1.0"
+  }
+}
