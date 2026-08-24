@@ -1,0 +1,24 @@
+{
+  "name": "zx-meeting-room",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,green \"pnpm run dev:server\" \"pnpm run dev:web\"",
+    "dev:web": "pnpm -F @meeting/web run dev",
+    "dev:server": "pnpm -F @meeting/server run dev",
+    "build:web": "pnpm -F @meeting/web run build",
+    "build:server": "pnpm -F @meeting/server run build",
+    "build": "pnpm run build:server && pnpm run build:web",
+    "build:prod": "pnpm run build:server && pnpm -F @meeting/web run build:prod",
+    "format": "pnpm -F @meeting/web run format"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "packageManager": "pnpm@10.22.0",
+  "volta": {
+    "node": "22.16.0",
+    "pnpm": "10.22.0"
+  }
+}

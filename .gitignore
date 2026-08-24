@@ -1,0 +1,15 @@
+node_modules
+dist
+dist_main
+dist_zx
+dist_m
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
+components.d.ts
+auto-imports.d.ts
+tsconfig.tsbuildinfo
+web/src/assets/index.ts
+web/src/server/index.js
