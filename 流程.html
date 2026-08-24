@@ -45,34 +45,6 @@
     .brand strong { font-size: 15px; }
     .brand span { font-size: 12px; color: var(--muted); }
 
-    .seg {
-      display: flex;
-      padding: 3px;
-      border-radius: 11px;
-      background: #eef2f7;
-    }
-
-    .seg button {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      font: inherit;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 7px 13px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background .16s ease, color .16s ease, transform .12s ease;
-    }
-
-    .seg button:hover { color: var(--ink); }
-    .seg button:active { transform: scale(.97); }
-    .seg button.on {
-      background: #fff;
-      color: var(--ink);
-      box-shadow: 0 3px 10px rgba(15, 23, 42, .08);
-    }
-
     .hint {
       margin-left: auto;
       font-size: 12px;
@@ -344,43 +316,6 @@
     const world = document.querySelector("#world");
     const lightbox = document.querySelector("#lightbox");
 
-    function bindSeg(el, items, get, set) {
-      el.innerHTML = items.map((it) =>
-        `<button type="button" data-id="${it.id}">${it.label}</button>`
-      ).join("");
-      el.onclick = (e) => {
-        const btn = e.target.closest("button");
-        if (!btn) return;
-        set(btn.dataset.id);
-        render(true);
-      };
-    }
-
-    function platformsOf(flowId) {
-      const flow = FLOWS.find((f) => f.id === flowId);
-      const ids = flow.platforms || Object.keys(PLATFORM);
-      return ids.map((id) => ({ id, label: PLATFORM[id].label }));
-    }
-
-    function bindPlat() {
-      const items = platformsOf(state.flow);
-      if (!items.some((it) => it.id === state.platform)) state.platform = items[0].id;
-      bindSeg(
-        document.querySelector("#platSeg"),
-        items,
-        () => state.platform,
-        (id) => { state.platform = id; state.selected = null; }
-      );
-    }
-
-    bindSeg(
-      document.querySelector("#flowSeg"),
-      FLOWS.map((f) => ({ id: f.id, label: f.title })),
-      () => state.flow,
-      (id) => { state.flow = id; state.selected = null; bindPlat(); }
-    );
-    bindPlat();
-
     function measure(node, sizes) {
       const self = sizes.nh + 64;
       if (!node.children || !node.children.length) {
@@ -492,7 +427,7 @@
     }
 
     let currentPositions = [];
-    let currentSizes = PLATFORM.pc;
+    let currentSizes = SIZES;
 
     function paintSelection() {
       const selected = currentPositions.find((p) => p.node === state.selected);
@@ -517,10 +452,9 @@
     }
 
     function render(shouldFit) {
-      const flow = FLOWS.find((f) => f.id === state.flow);
-      const sizes = PLATFORM[state.platform];
+      const sizes = SIZES;
       currentSizes = sizes;
-      const positions = layout(structuredClone(flow.tree), sizes);
+      const positions = layout(structuredClone(TREE), sizes);
       currentPositions = positions;
 
       world.innerHTML = "";
@@ -532,7 +466,7 @@
       world.appendChild(svg);
 
       positions.forEach((item) => {
-        const src = img(flow, item.node.file).replace("{platform}", state.platform);
+        const src = srcOf(item.node.file);
         const el = document.createElement("button");
         el.type = "button";
         el.className = "node" + (item.depth === 0 ? " root" : "");
@@ -556,7 +490,7 @@
         };
         el.ondblclick = (ev) => {
           ev.stopPropagation();
-          openLight(src, `${flow.title} · ${item.node.title}`);
+          openLight(src, `钉钉 · ${item.node.title}`);
         };
         world.appendChild(el);
         item.el = el;
@@ -586,13 +520,6 @@
             world.appendChild(label);
           }
         });
-      });
-
-      document.querySelector("#pathHint").innerHTML =
-        `图片：<code>${flow.hint || "images/{流程}/{pc|mobile}/{序号}-{步骤}.png"}</code>`;
-      document.querySelectorAll(".seg").forEach((seg, i) => {
-        const id = i === 0 ? state.flow : state.platform;
-        seg.querySelectorAll("button").forEach((btn) => btn.classList.toggle("on", btn.dataset.id === id));
       });
 
       if (shouldFit) fit(positions, sizes);
