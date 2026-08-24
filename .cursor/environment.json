@@ -1,0 +1,20 @@
+{
+  "name": "zx-meeting-room",
+  "install": "pnpm install --frozen-lockfile",
+  "terminals": [
+    {
+      "name": "server",
+      "command": "pnpm dev:server",
+      "description": "Hono API server (tsx watch) on port 3100, routes under /meetingApi"
+    },
+    {
+      "name": "web",
+      "command": "pnpm dev:web",
+      "description": "Vite MPA dev server on port 6273 (base /meeting/), proxies /meetingApi -> localhost:3100"
+    }
+  ],
+  "ports": [
+    { "name": "web", "port": 6273 },
+    { "name": "api", "port": 3100 }
+  ]
+}
