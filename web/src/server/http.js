@@ -1,11 +1,5 @@
 import axios from "axios";
-import {
-  getToken,
-  setToken,
-  getCorpId,
-  getUrlParams,
-  showToastError
-} from "@/utils";
+import { getToken, setToken, getCorpId, showToastError } from "@/utils";
 import { useSessionStorage } from "@vueuse/core";
 import { unref } from "vue";
 
@@ -22,12 +16,9 @@ export const baseMap = {
   meeting: "/meetingApi"
 };
 
+// clientType 唯一取值入口是 bootstrapAuthFromUrl()（在各 main.js 挂载前调用），
+// 这里只读 sessionStorage，不再重复解析 URL——见 utils/index.js 顶部注释。
 const clientType = useSessionStorage("clientType", "app");
-
-const params = getUrlParams(location.href);
-if (params.get("clientType")) {
-  clientType.value = params.get("clientType");
-}
 
 export const setClientType = (v) => {
   if (v) {
@@ -87,6 +78,11 @@ export const insResponseArgs = [
         IsRefrshToken = true;
         currentResponse = response;
         return refreshToken()
+          // 无论刷新成功/失败/返回假值都要复位，否则此后所有 O_T_001/002
+          // 会一直走下面的排队分支，定时器与 pending Promise 永久堆积
+          .finally(() => {
+            IsRefrshToken = false;
+          })
           .then((res) => {
             if (res) {
               const option = { ...currentResponse.config };
@@ -97,7 +93,6 @@ export const insResponseArgs = [
                   option.data = currentResponse.config.data;
                 }
               }
-              IsRefrshToken = false;
               return http(option);
             }
           })
@@ -106,11 +101,12 @@ export const insResponseArgs = [
             return Promise.reject(error);
           });
       }
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
+        const start = Date.now();
         const polling = setInterval(() => {
           if (!IsRefrshToken) {
             clearInterval(polling);
-            const option = { ...response.config, baseURL: "" };
+            const option = { ...response.config };
             if (typeof response.config.data === "string") {
               try {
                 option.data = JSON.parse(response.config.data);
@@ -119,6 +115,12 @@ export const insResponseArgs = [
               }
             }
             resolve(http(option));
+            return;
+          }
+          // 最长等待 5s，避免刷新链异常挂起时排队分支无限轮询
+          if (Date.now() - start > 5000) {
+            clearInterval(polling);
+            reject(new Error("等待 token 刷新超时"));
           }
         }, 10);
       });
