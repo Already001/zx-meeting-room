@@ -12,3 +12,8 @@ pnpm build        # 产出 web/dist/
 ```
 
 部署 base `/meeting/`。详见 `CLAUDE.md`。
+
+文档：
+
+- 需求：`docs/智能会议室-需求文档.md`
+- 规格：`docs/智能会议室-规格说明.md`
