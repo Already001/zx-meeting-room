@@ -1,0 +1,19 @@
+{
+  "type": "design",
+  "designSystems": [],
+  "primaryDesignSystem": null,
+  "assets": {
+    "Meeting Room Management": {
+      "versions": [
+        {
+          "path": "Meeting Room Management.html",
+          "createdAt": "2026-08-24T08:36:12.048Z",
+          "status": "needs-review",
+          "subtitle": "智信智能会议室管理端高保真交互原型"
+        }
+      ]
+    }
+  },
+  "createdAt": "2026-08-24T08:36:12.048Z",
+  "updatedAt": "2026-08-24T08:36:12.048Z"
+}

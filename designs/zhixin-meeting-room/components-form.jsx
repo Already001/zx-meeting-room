@@ -1,0 +1,521 @@
+// Room Form Page Component (New / Edit)
+
+const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast }) => {
+  const isEdit = Boolean(initialRoom && initialRoom.id);
+
+  // Form State
+  const [formData, setFormData] = React.useState(() => {
+    if (isEdit) {
+      return {
+        name: initialRoom.name || "",
+        groupName: initialRoom.groupName || "",
+        buildingName: initialRoom.buildingName || "",
+        floorName: initialRoom.floorName || "",
+        capacity: initialRoom.capacity || "",
+        facilities: initialRoom.facilities ? [...initialRoom.facilities] : [],
+        locationNote: initialRoom.locationNote || "",
+        openStart: initialRoom.openStart || "07:00",
+        openEnd: initialRoom.openEnd || "23:00",
+        bookAheadDays: initialRoom.bookAheadDays || 90,
+        needApproval: Boolean(initialRoom.needApproval),
+        allowRecurring: Boolean(initialRoom.allowRecurring),
+        allowPreempt: Boolean(initialRoom.allowPreempt),
+        enabled: initialRoom.enabled !== undefined ? initialRoom.enabled : true
+      };
+    }
+    return {
+      name: "",
+      groupName: "",
+      buildingName: "",
+      floorName: "",
+      capacity: "",
+      facilities: [],
+      locationNote: "",
+      openStart: "07:00",
+      openEnd: "23:00",
+      bookAheadDays: 90,
+      needApproval: false,
+      allowRecurring: false,
+      allowPreempt: false,
+      enabled: true
+    };
+  });
+
+  // Snapshot for dirty check
+  const [initialSnapshot] = React.useState(() => JSON.stringify(formData));
+  const isDirty = React.useMemo(() => {
+    return JSON.stringify(formData) !== initialSnapshot;
+  }, [formData, initialSnapshot]);
+
+  // Errors state
+  const [errors, setErrors] = React.useState({});
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  // Derive existing buildings from rooms for dropdown suggestions
+  const existingBuildings = React.useMemo(() => {
+    const set = new Set();
+    existingRooms.forEach(r => {
+      if (r.buildingName) set.add(r.buildingName);
+    });
+    return Array.from(set);
+  }, [existingRooms]);
+
+  // Derive existing floors for current building
+  const existingFloors = React.useMemo(() => {
+    const set = new Set();
+    existingRooms.forEach(r => {
+      if (r.buildingName === formData.buildingName && r.floorName) {
+        set.add(r.floorName);
+      }
+    });
+    return Array.from(set);
+  }, [existingRooms, formData.buildingName]);
+
+  // Field change helpers
+  const handleFieldChange = (key, value) => {
+    setFormData(prev => {
+      const next = { ...prev, [key]: value };
+      if (key === "buildingName" && value !== prev.buildingName) {
+        // Reset floor when building changes per spec F-2.2 / 7.3
+        next.floorName = "";
+      }
+      return next;
+    });
+
+    if (errors[key]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const handleFacilityToggle = (item) => {
+    setFormData(prev => {
+      const exists = prev.facilities.includes(item);
+      const nextFacilities = exists
+        ? prev.facilities.filter(f => f !== item)
+        : [...prev.facilities, item];
+      // Keep sorted per FACILITY_OPTIONS
+      const sorted = window.FACILITY_OPTIONS.filter(f => nextFacilities.includes(f));
+      return { ...prev, facilities: sorted };
+    });
+  };
+
+  // Validation
+  const validate = () => {
+    const errs = {};
+    const trimmedName = (formData.name || "").trim();
+    if (!trimmedName) {
+      errs.name = "请输入名称";
+    } else if (trimmedName.length > 30) {
+      errs.name = "名称不超过 30 个字";
+    } else {
+      // Check duplicate name for enabled rooms
+      const isTargetEnabled = formData.enabled;
+      if (isTargetEnabled) {
+        const duplicate = existingRooms.find(r => {
+          if (isEdit && r.id === initialRoom.id) return false;
+          return r.enabled && r.name === trimmedName;
+        });
+        if (duplicate) {
+          errs.name = isEdit ? "已有同名启用中的会议室，请修改名称" : "该名称已被使用";
+        }
+      }
+    }
+
+    if (!formData.buildingName || !formData.buildingName.trim()) {
+      errs.buildingName = "请选择或输入建筑";
+    }
+    if (!formData.floorName || !formData.floorName.trim()) {
+      errs.floorName = "请选择或输入楼层";
+    }
+    const cap = Number(formData.capacity);
+    if (!formData.capacity || isNaN(cap) || cap < 1 || cap > 999 || !Number.isInteger(cap)) {
+      errs.capacity = "请输入容纳人数（1-999整数）";
+    }
+
+    if (!formData.openStart || !formData.openEnd) {
+      errs.openHours = "请选择开放时间";
+    } else if (formData.openEnd <= formData.openStart) {
+      errs.openHours = "结束时间必须晚于开始时间";
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (isSaving) return;
+
+    if (!validate()) {
+      showToast("请检查表单必填项", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    // Prepare payload
+    const payload = {
+      name: formData.name.trim(),
+      groupName: formData.groupName.trim() || null,
+      buildingName: formData.buildingName.trim(),
+      floorName: formData.floorName.trim(),
+      capacity: Number(formData.capacity),
+      facilities: formData.facilities,
+      locationNote: formData.locationNote.trim() || null,
+      openStart: formData.openStart,
+      openEnd: formData.openEnd,
+      bookAheadDays: Number(formData.bookAheadDays),
+      needApproval: Boolean(formData.needApproval),
+      allowRecurring: Boolean(formData.allowRecurring),
+      allowPreempt: Boolean(formData.allowPreempt),
+      enabled: Boolean(formData.enabled)
+    };
+
+    setTimeout(() => {
+      setIsSaving(false);
+      onSave(payload, isEdit ? initialRoom.id : null);
+    }, 200);
+  };
+
+  return (
+    <div style={{ maxWidth: 740, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Header Bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => onCancel(isDirty)}
+          style={{ padding: "0 10px" }}
+        >
+          <window.IconBack /> 返回
+        </button>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--color-ink)" }}>
+          {isEdit ? "编辑会议室" : "新建会议室"}
+        </h1>
+      </div>
+
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Section 1: 基本信息 */}
+        <div className="card-content">
+          <h2 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "var(--color-ink)", borderBottom: "1px solid var(--color-hairline)", paddingBottom: 10 }}>
+            基本信息
+          </h2>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* 会议室名称 */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>会议室名称
+              </label>
+              <div>
+                <input
+                  type="text"
+                  maxLength={30}
+                  className={`input ${errors.name ? 'error' : ''}`}
+                  placeholder="例如：1号会议室（1-30字）"
+                  value={formData.name}
+                  onChange={e => handleFieldChange("name", e.target.value)}
+                />
+                {errors.name && (
+                  <div style={{ color: "var(--color-danger)", fontSize: 12, marginTop: 4 }}>{errors.name}</div>
+                )}
+              </div>
+            </div>
+
+            {/* 所属分组 */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
+              <label style={{ fontSize: 14, color: "var(--color-body)", marginTop: 6 }}>
+                所属分组
+              </label>
+              <div>
+                <input
+                  type="text"
+                  maxLength={20}
+                  className="input"
+                  placeholder="选填，例如：研发区 / 高管区（上限20字）"
+                  value={formData.groupName}
+                  onChange={e => handleFieldChange("groupName", e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 建筑与楼层 */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>所在位置
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <input
+                    type="text"
+                    list="building-list"
+                    className={`input ${errors.buildingName ? 'error' : ''}`}
+                    placeholder="选择或输入建筑"
+                    value={formData.buildingName}
+                    onChange={e => handleFieldChange("buildingName", e.target.value)}
+                  />
+                  <datalist id="building-list">
+                    {existingBuildings.map(b => (
+                      <option key={b} value={b} />
+                    ))}
+                  </datalist>
+                  {errors.buildingName && (
+                    <div style={{ color: "var(--color-danger)", fontSize: 12, marginTop: 4 }}>{errors.buildingName}</div>
+                  )}
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    list="floor-list"
+                    disabled={!formData.buildingName}
+                    className={`input ${errors.floorName ? 'error' : ''}`}
+                    placeholder={formData.buildingName ? "选择或输入楼层" : "请先选择/输入建筑"}
+                    value={formData.floorName}
+                    onChange={e => handleFieldChange("floorName", e.target.value)}
+                  />
+                  <datalist id="floor-list">
+                    {existingFloors.map(f => (
+                      <option key={f} value={f} />
+                    ))}
+                  </datalist>
+                  {errors.floorName && (
+                    <div style={{ color: "var(--color-danger)", fontSize: 12, marginTop: 4 }}>{errors.floorName}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 容纳人数 */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>容纳人数
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  className={`input ${errors.capacity ? 'error' : ''}`}
+                  style={{ width: 140 }}
+                  placeholder="1-999"
+                  value={formData.capacity}
+                  onChange={e => handleFieldChange("capacity", e.target.value)}
+                />
+                <span style={{ color: "var(--color-body)", fontSize: 14 }}>人</span>
+                {errors.capacity && (
+                  <span style={{ color: "var(--color-danger)", fontSize: 12, marginLeft: 8 }}>{errors.capacity}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 2: 会议室设施 */}
+        <div className="card-content">
+          <h2 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "var(--color-ink)", borderBottom: "1px solid var(--color-hairline)", paddingBottom: 10 }}>
+            会议室设施
+          </h2>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 20, padding: "4px 0" }}>
+            {window.FACILITY_OPTIONS.map(item => (
+              <label key={item} className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.facilities.includes(item)}
+                  onChange={() => handleFacilityToggle(item)}
+                />
+                {item}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 3: 预定规则 */}
+        <div className="card-content">
+          <h2 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "var(--color-ink)", borderBottom: "1px solid var(--color-hairline)", paddingBottom: 10 }}>
+            预定规则
+          </h2>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* 开放时间 */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>开放时间
+              </label>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="time"
+                    className="input"
+                    style={{ width: 140 }}
+                    value={formData.openStart}
+                    onChange={e => handleFieldChange("openStart", e.target.value)}
+                  />
+                  <span style={{ color: "var(--color-mute)" }}>至</span>
+                  <input
+                    type="time"
+                    className="input"
+                    style={{ width: 140 }}
+                    value={formData.openEnd}
+                    onChange={e => handleFieldChange("openEnd", e.target.value)}
+                  />
+                </div>
+                {errors.openHours && (
+                  <div style={{ color: "var(--color-danger)", fontSize: 12, marginTop: 4 }}>{errors.openHours}</div>
+                )}
+              </div>
+            </div>
+
+            {/* 可提前预定范围 */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>提前预定
+              </label>
+              <div>
+                <select
+                  className="select"
+                  style={{ width: 220 }}
+                  value={formData.bookAheadDays}
+                  onChange={e => handleFieldChange("bookAheadDays", Number(e.target.value))}
+                >
+                  {window.BOOK_AHEAD_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 开关选项 */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16 }}>
+              <label style={{ fontSize: 14, color: "var(--color-body)" }}>预定需审批</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={formData.needApproval}
+                    onChange={e => handleFieldChange("needApproval", e.target.checked)}
+                  />
+                  <span className="slider"></span>
+                </label>
+                <span style={{ fontSize: 13, color: "var(--color-mute)" }}>
+                  {formData.needApproval ? "开启" : "关闭"}（仅数据落库）
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16 }}>
+              <label style={{ fontSize: 14, color: "var(--color-body)" }}>允许周期预定</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={formData.allowRecurring}
+                    onChange={e => handleFieldChange("allowRecurring", e.target.checked)}
+                  />
+                  <span className="slider"></span>
+                </label>
+                <span style={{ fontSize: 13, color: "var(--color-mute)" }}>
+                  {formData.allowRecurring ? "开启" : "关闭"}（仅数据落库）
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16 }}>
+              <label style={{ fontSize: 14, color: "var(--color-body)" }}>支持会议室抢占</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={formData.allowPreempt}
+                    onChange={e => handleFieldChange("allowPreempt", e.target.checked)}
+                  />
+                  <span className="slider"></span>
+                </label>
+                <span style={{ fontSize: 13, color: "var(--color-mute)" }}>
+                  {formData.allowPreempt ? "开启" : "关闭"}（仅数据落库）
+                </span>
+              </div>
+            </div>
+
+            {/* 初始状态 */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16, paddingTop: 4 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)" }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>状态
+              </label>
+              <div style={{ display: "flex", gap: 24 }}>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="roomStatus"
+                    checked={formData.enabled === true}
+                    onChange={() => handleFieldChange("enabled", true)}
+                  />
+                  启用中
+                </label>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="roomStatus"
+                    checked={formData.enabled === false}
+                    onChange={() => handleFieldChange("enabled", false)}
+                  />
+                  已停用
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: 备注 */}
+        <div className="card-content">
+          <h2 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "var(--color-ink)", borderBottom: "1px solid var(--color-hairline)", paddingBottom: 10 }}>
+            备注信息
+          </h2>
+
+          <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
+            <label style={{ fontSize: 14, color: "var(--color-body)", marginTop: 6 }}>
+              备注
+            </label>
+            <div>
+              <textarea
+                className="input"
+                maxLength={100}
+                placeholder="门牌、投影仪连接线、特定使用须知等补充信息（上限100字）"
+                value={formData.locationNote}
+                onChange={e => handleFieldChange("locationNote", e.target.value)}
+              />
+              <div style={{ textAlign: "right", fontSize: 12, color: "var(--color-mute)", marginTop: 4 }}>
+                {(formData.locationNote || "").length} / 100
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingBottom: 40 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => onCancel(isDirty)}
+          >
+            取消
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={isSaving}
+          >
+            {isSaving ? "保存中..." : "保存"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+Object.assign(window, {
+  RoomFormPage
+});
