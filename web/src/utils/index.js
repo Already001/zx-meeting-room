@@ -60,7 +60,7 @@ export const bootstrapAuthFromUrl = () => {
     sessionStorage.setItem("meetingCorpId", corpId);
   }
   if (clientType) {
-    sessionStorage.setItem("clientType", JSON.stringify(clientType));
+    sessionStorage.setItem("clientType", clientType);
   }
 
   return {
