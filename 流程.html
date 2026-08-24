@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>钉钉 · 智能会议室流程</title>
+  <style>
+    :root {
+      --ink: #1a2330;
+      --muted: #64748b;
+      --paper: #f4f7fb;
+      --accent: #2b7fff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      color: var(--ink);
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--paper);
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+    }
+
+    .toolbar {
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 18px;
+      background: rgba(255, 255, 255, .86);
+      border-bottom: 1px solid #e2e8f0;
+      backdrop-filter: blur(16px);
+    }
+
+    .brand { display: flex; flex-direction: column; gap: 1px; min-width: 140px; }
+    .brand strong { font-size: 15px; }
+    .brand span { font-size: 12px; color: var(--muted); }
+
+    .seg {
+      display: flex;
+      padding: 3px;
+      border-radius: 11px;
+      background: #eef2f7;
+    }
+
+    .seg button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .16s ease, color .16s ease, transform .12s ease;
+    }
+
+    .seg button:hover { color: var(--ink); }
+    .seg button:active { transform: scale(.97); }
+    .seg button.on {
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 3px 10px rgba(15, 23, 42, .08);
+    }
+
+    .hint {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .hint code {
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: #eef2f7;
+    }
+
+    .zoom {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .zoom button {
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 8px;
+      background: #eef2f7;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .stage {
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+      background-image:
+        radial-gradient(#d5deea 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+
+    .stage.dragging { cursor: grabbing; }
+
+    .world {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform-origin: 0 0;
+    }
+
+    svg.wires {
+      position: absolute;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    svg.wires path {
+      fill: none;
+      stroke-linecap: round;
+      transition: stroke .2s ease, opacity .2s ease;
+    }
+
+    svg.wires path.dim { opacity: .22; }
+    svg.wires path.hot { opacity: 1; filter: drop-shadow(0 0 4px rgba(43, 127, 255, .35)); }
+
+    .node {
+      position: absolute;
+      z-index: 2;
+      width: var(--nw);
+      padding: 0;
+      border: 1px solid #d9e2ee;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(28, 50, 90, .1);
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      overflow: hidden;
+      transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease, opacity .18s ease;
+    }
+
+    .node:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 32px rgba(43, 127, 255, .16);
+    }
+
+    .node:active { transform: scale(.99); }
+
+    .node.root {
+      border-color: var(--accent);
+      box-shadow: 0 12px 32px rgba(43, 127, 255, .22);
+    }
+
+    .node.on {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(43, 127, 255, .25), 0 12px 28px rgba(43, 127, 255, .18);
+    }
+
+    .node.dim { opacity: .38; }
+
+    .thumb {
+      position: relative;
+      height: var(--nh);
+      background: #dbe4f0;
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 10px 12px 12px;
+    }
+
+    .meta b {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .meta span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, .58);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .edge-label {
+      position: absolute;
+      z-index: 3;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      font-size: 11px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      background: rgba(12, 20, 34, .62);
+      cursor: zoom-out;
+    }
+
+    .lightbox.show { display: grid; }
+
+    .lightbox img {
+      max-width: min(92vw, 1280px);
+      max-height: 84vh;
+      border-radius: 12px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .4);
+    }
+
+    .lightbox p {
+      position: absolute;
+      bottom: 16px;
+      color: #fff;
+      margin: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header class="toolbar">
+      <div class="brand">
+        <strong>钉钉 · 智能会议室</strong>
+        <span>滚轮缩放 · 拖动画布 · 单击高亮路径 · 双击看大图</span>
+      </div>
+      <div class="zoom">
+        <button type="button" id="zoomOut" aria-label="缩小">−</button>
+        <button type="button" id="zoomIn" aria-label="放大">+</button>
+        <button type="button" id="zoomFit">适应</button>
+      </div>
+      <div class="hint">图片：<code>images/钉钉/{序号}-{步骤}.jpg</code></div>
+    </header>
+    <main class="stage" id="stage">
+      <div class="world" id="world"></div>
+    </main>
+  </div>
+  <div class="lightbox" id="lightbox">
+    <img alt="">
+    <p></p>
+  </div>
+
+  <script>
+    const COLORS = ["#2b7fff", "#7c5cfc", "#0f9f6e", "#f59e0b", "#e11d48"];
+
+    const SIZES = { badge: "Mobile", nw: 132, nh: 196 };
+    const srcOf = (file) => `images/钉钉/${file}`;
+    const TREE = {
+      title: "智能会议室",
+      file: "01-智能会议室-入口.jpg",
+      children: [
+        {
+          title: "预定会议室",
+          file: "02-预定会议室-列表.jpg",
+          action: "预定会议室",
+          children: [
+            { title: "选择日期", file: "03-预定会议室-选择日期.jpg", action: "点日期" },
+            { title: "筛选楼层", file: "04-预定会议室-筛选建筑楼层.jpg", action: "建筑·楼层" },
+            { title: "筛选设施", file: "05-预定会议室-筛选设施.jpg", action: "设施" },
+            { title: "筛选人数", file: "06-预定会议室-筛选人数.jpg", action: "人数" },
+            {
+              title: "选择时段",
+              file: "07-预定会议室-选择时段.jpg",
+              action: "点选房间",
+              children: [
+                {
+                  title: "会议室详情",
+                  file: "08-会议室详情-基本信息.jpg",
+                  action: "更多",
+                  children: [
+                    { title: "预定规则", file: "09-会议室详情-预定规则.jpg", action: "下滑" }
+                  ]
+                },
+                {
+                  title: "新建日程",
+                  file: "10-新建日程.jpg",
+                  action: "下一步",
+                  children: [
+                    { title: "日程详情", file: "11-日程详情.jpg", action: "完成" }
+                  ]
+                }
+              ]
+            },
+            { title: "已预定状态", file: "12-预定会议室-已预定状态.jpg", action: "预约后返回" }
+          ]
+        },
+        {
+          title: "我的预定",
+          file: "13-我的预定.jpg",
+          action: "我的预定",
+          children: [
+            { title: "释放会议室", file: "14-释放会议室.jpg", action: "释放会议室" }
+          ]
+        }
+      ]
+    };
+
+    const state = {
+      pan: { x: 0, y: 0 },
+      scale: 1,
+      dragging: false,
+      selected: null
+    };
+
+    const stage = document.querySelector("#stage");
+    const world = document.querySelector("#world");
+    const lightbox = document.querySelector("#lightbox");
+
+    function bindSeg(el, items, get, set) {
+      el.innerHTML = items.map((it) =>
+        `<button type="button" data-id="${it.id}">${it.label}</button>`
+      ).join("");
+      el.onclick = (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        set(btn.dataset.id);
+        render(true);
+      };
+    }
+
+    function platformsOf(flowId) {
+      const flow = FLOWS.find((f) => f.id === flowId);
+      const ids = flow.platforms || Object.keys(PLATFORM);
+      return ids.map((id) => ({ id, label: PLATFORM[id].label }));
+    }
+
+    function bindPlat() {
+      const items = platformsOf(state.flow);
+      if (!items.some((it) => it.id === state.platform)) state.platform = items[0].id;
+      bindSeg(
+        document.querySelector("#platSeg"),
+        items,
+        () => state.platform,
+        (id) => { state.platform = id; state.selected = null; }
+      );
+    }
+
+    bindSeg(
+      document.querySelector("#flowSeg"),
+      FLOWS.map((f) => ({ id: f.id, label: f.title })),
+      () => state.flow,
+      (id) => { state.flow = id; state.selected = null; bindPlat(); }
+    );
+    bindPlat();
+
+    function measure(node, sizes) {
+      const self = sizes.nh + 64;
+      if (!node.children || !node.children.length) {
+        node._h = self;
+        return self;
+      }
+      node._h = node.children.reduce((sum, child) => sum + measure(child, sizes), 0);
+      return node._h;
+    }
+
+    function layout(root, sizes) {
+      const gapX = sizes.nw + 96;
+      const positions = [];
+
+      function place(node, x, cy, side, depth, color) {
+        const h = sizes.nh + 54;
+        positions.push({ node, x, y: cy - h / 2, side, depth, color });
+        const kids = node.children || [];
+        if (!kids.length) return;
+        let cursor = cy - node._h / 2;
+        kids.forEach((child, i) => {
+          const childColor = depth === 0 ? COLORS[i % COLORS.length] : color;
+          const ccy = cursor + child._h / 2;
+          place(child, x + side * gapX, ccy, side, depth + 1, childColor);
+          cursor += child._h;
+        });
+      }
+
+      measure(root, sizes);
+      const kids = root.children || [];
+      const split = Math.ceil(kids.length / 2);
+      const right = kids.slice(0, split);
+      const left = kids.slice(split);
+      const h = sizes.nh + 54;
+      positions.push({ node: root, x: 0, y: -h / 2, side: 0, depth: 0, color: "#2b7fff" });
+
+      const placeGroup = (group, side) => {
+        const total = group.reduce((s, n) => s + n._h, 0);
+        let cursor = -total / 2;
+        group.forEach((child, i) => {
+          const color = COLORS[i % COLORS.length];
+          const ccy = cursor + child._h / 2;
+          place(child, side * gapX, ccy, side, 1, color);
+          cursor += child._h;
+        });
+      };
+
+      placeGroup(right, 1);
+      placeGroup(left, -1);
+      return positions;
+    }
+
+    function port(item, sizes, which) {
+      const midY = item.y + (sizes.nh + 54) / 2;
+      if (item.depth === 0) {
+        return which === "out-right" || which === "in-right"
+          ? { x: item.x + sizes.nw, y: midY }
+          : { x: item.x, y: midY };
+      }
+      if (item.side === 1) {
+        return which === "in"
+          ? { x: item.x, y: midY }
+          : { x: item.x + sizes.nw, y: midY };
+      }
+      return which === "in"
+        ? { x: item.x + sizes.nw, y: midY }
+        : { x: item.x, y: midY };
+    }
+
+    function curve(a, b) {
+      const dx = Math.max(48, Math.abs(b.x - a.x) * 0.5);
+      const s = a.x < b.x ? 1 : -1;
+      return `M ${a.x} ${a.y} C ${a.x + s * dx} ${a.y}, ${b.x - s * dx} ${b.y}, ${b.x} ${b.y}`;
+    }
+
+    function applyView() {
+      world.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.scale})`;
+    }
+
+    function fit(positions, sizes) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      positions.forEach((p) => {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x + sizes.nw);
+        maxY = Math.max(maxY, p.y + sizes.nh + 54);
+      });
+      const pad = 80;
+      const w = maxX - minX;
+      const h = maxY - minY;
+      const sx = (stage.clientWidth - pad * 2) / w;
+      const sy = (stage.clientHeight - pad * 2) / h;
+      state.scale = Math.min(1.15, Math.max(0.18, Math.min(sx, sy)));
+      state.pan.x = (stage.clientWidth - w * state.scale) / 2 - minX * state.scale;
+      state.pan.y = (stage.clientHeight - h * state.scale) / 2 - minY * state.scale;
+      applyView();
+    }
+
+    function ancestors(positions, item) {
+      const set = new Set([item.node]);
+      let cur = item;
+      while (cur && cur.depth > 0) {
+        const parent = positions.find((p) => (p.node.children || []).includes(cur.node));
+        if (!parent) break;
+        set.add(parent.node);
+        cur = parent;
+      }
+      return set;
+    }
+
+    let currentPositions = [];
+    let currentSizes = PLATFORM.pc;
+
+    function paintSelection() {
+      const selected = currentPositions.find((p) => p.node === state.selected);
+      const hot = selected ? ancestors(currentPositions, selected) : null;
+      world.querySelectorAll(".node").forEach((el) => {
+        const node = currentPositions.find((p) => p.el === el)?.node;
+        el.classList.toggle("on", node === state.selected);
+        el.classList.toggle("dim", Boolean(hot) && !hot.has(node));
+      });
+      world.querySelectorAll("svg.wires path").forEach((path) => {
+        if (!hot) {
+          path.classList.remove("dim", "hot");
+          return;
+        }
+        const from = path.dataset.from;
+        const to = path.dataset.to;
+        const on = [...hot].some((n) => n.title + n.file === from) &&
+          [...hot].some((n) => n.title + n.file === to);
+        path.classList.toggle("hot", on);
+        path.classList.toggle("dim", !on);
+      });
+    }
+
+    function render(shouldFit) {
+      const flow = FLOWS.find((f) => f.id === state.flow);
+      const sizes = PLATFORM[state.platform];
+      currentSizes = sizes;
+      const positions = layout(structuredClone(flow.tree), sizes);
+      currentPositions = positions;
+
+      world.innerHTML = "";
+      world.style.setProperty("--nw", sizes.nw + "px");
+      world.style.setProperty("--nh", sizes.nh + "px");
+
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "wires");
+      world.appendChild(svg);
+
+      positions.forEach((item) => {
+        const src = img(flow, item.node.file).replace("{platform}", state.platform);
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = "node" + (item.depth === 0 ? " root" : "");
+        el.style.left = item.x + "px";
+        el.style.top = item.y + "px";
+        if (item.depth > 0) el.style.borderTop = `3px solid ${item.color}`;
+        el.innerHTML = `
+          <div class="thumb">
+            <span class="badge">${item.depth === 0 ? "中心" : sizes.badge}</span>
+            <img src="${src}" alt="${item.node.title}">
+          </div>
+          <div class="meta">
+            <b>${item.node.title}</b>
+            <span>${item.node.file}</span>
+          </div>
+        `;
+        el.onclick = (ev) => {
+          ev.stopPropagation();
+          state.selected = item.node;
+          paintSelection();
+        };
+        el.ondblclick = (ev) => {
+          ev.stopPropagation();
+          openLight(src, `${flow.title} · ${item.node.title}`);
+        };
+        world.appendChild(el);
+        item.el = el;
+      });
+
+      positions.forEach((p) => {
+        (p.node.children || []).forEach((child) => {
+          const b = positions.find((q) => q.node === child);
+          if (!b) return;
+          const fromWhich = p.depth === 0 ? (b.side === 1 ? "out-right" : "out-left") : "out";
+          const a = port(p, sizes, fromWhich);
+          const c = port(b, sizes, "in");
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", curve(a, c));
+          path.setAttribute("stroke", b.color);
+          path.setAttribute("stroke-width", String(Math.max(2, 6.5 - b.depth * 1.2)));
+          path.dataset.from = p.node.title + p.node.file;
+          path.dataset.to = b.node.title + b.node.file;
+          svg.appendChild(path);
+
+          if (child.action) {
+            const label = document.createElement("div");
+            label.className = "edge-label";
+            label.textContent = child.action;
+            label.style.left = (a.x + c.x) / 2 - 36 + "px";
+            label.style.top = (a.y + c.y) / 2 - 10 + "px";
+            world.appendChild(label);
+          }
+        });
+      });
+
+      document.querySelector("#pathHint").innerHTML =
+        `图片：<code>${flow.hint || "images/{流程}/{pc|mobile}/{序号}-{步骤}.png"}</code>`;
+      document.querySelectorAll(".seg").forEach((seg, i) => {
+        const id = i === 0 ? state.flow : state.platform;
+        seg.querySelectorAll("button").forEach((btn) => btn.classList.toggle("on", btn.dataset.id === id));
+      });
+
+      if (shouldFit) fit(positions, sizes);
+      else applyView();
+      paintSelection();
+    }
+
+    function openLight(src, caption) {
+      lightbox.querySelector("img").src = src;
+      lightbox.querySelector("p").textContent = caption;
+      lightbox.classList.add("show");
+    }
+
+    lightbox.onclick = () => lightbox.classList.remove("show");
+
+    function zoomAt(next, cx, cy) {
+      const wx = (cx - state.pan.x) / state.scale;
+      const wy = (cy - state.pan.y) / state.scale;
+      state.scale = Math.min(1.8, Math.max(0.35, next));
+      state.pan.x = cx - wx * state.scale;
+      state.pan.y = cy - wy * state.scale;
+      applyView();
+    }
+
+    document.querySelector("#zoomIn").onclick = () =>
+      zoomAt(state.scale * 1.12, stage.clientWidth / 2, stage.clientHeight / 2);
+    document.querySelector("#zoomOut").onclick = () =>
+      zoomAt(state.scale / 1.12, stage.clientWidth / 2, stage.clientHeight / 2);
+    document.querySelector("#zoomFit").onclick = () => fit(currentPositions, currentSizes);
+
+    stage.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = stage.getBoundingClientRect();
+      zoomAt(
+        state.scale * (e.deltaY > 0 ? 0.92 : 1.08),
+        e.clientX - rect.left,
+        e.clientY - rect.top
+      );
+    }, { passive: false });
+
+    let start = null;
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".node")) return;
+      state.dragging = true;
+      stage.classList.add("dragging");
+      start = { x: e.clientX - state.pan.x, y: e.clientY - state.pan.y };
+      stage.setPointerCapture(e.pointerId);
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!state.dragging) return;
+      state.pan.x = e.clientX - start.x;
+      state.pan.y = e.clientY - start.y;
+      applyView();
+    });
+    stage.addEventListener("pointerup", () => {
+      state.dragging = false;
+      stage.classList.remove("dragging");
+    });
+    stage.addEventListener("click", (e) => {
+      if (e.target.closest(".node")) return;
+      state.selected = null;
+      paintSelection();
+    });
+
+    render(true);
+    window.addEventListener("resize", () => fit(currentPositions, currentSizes));
+  </script>
+</body>
+
+</html>
