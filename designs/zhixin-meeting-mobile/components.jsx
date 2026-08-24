@@ -84,7 +84,7 @@ const MobileFilterStrip = ({ filters, onOpenFilterModal }) => {
 };
 
 // 3. Room List with Timeline Card
-const MobileRoomCard = ({ room, onSelectSlot, onOpenDetail, selectedSlots }) => {
+const MobileRoomCard = ({ room, onSelectSlot, onOpenDetail, onStartBooking, selectedSlots }) => {
   const isSelectedRoom = selectedSlots && selectedSlots.roomId === room.id;
   const [activeBusyEvent, setActiveBusyEvent] = React.useState(null);
 
@@ -207,9 +207,12 @@ const MobileRoomCard = ({ room, onSelectSlot, onOpenDetail, selectedSlots }) => 
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563EB", flexShrink: 0 }} />
               <span>已选时段：<strong>{selectionTimeText}</strong></span>
             </div>
-            <span style={{ fontWeight: 600, color: "#2563EB", cursor: "pointer", marginLeft: "auto" }} onClick={() => onSelectSlot(room, null)}>
-              去预定 →
-            </span>
+            <span style={{ fontWeight: 600, color: "#2563EB", cursor: "pointer", marginLeft: "auto" }} onClick={(e) => {
+            e.stopPropagation();
+            if (onStartBooking) onStartBooking(room);
+          }}>
+            去预定 →
+          </span>
           </div>
         )}
       </div>
@@ -392,7 +395,7 @@ const MobileCreateScheduleModal = ({ room, selectedSlots, isOpen, onClose, onSub
 // 6. My Bookings Tab & Release Flow (釘釘 13 / 14 我的预定 + 释放)
 const MobileMyBookingsView = ({ bookings, onReleaseBooking }) => {
   return (
-    <div style={{ padding: 12 }}>
+    <div className="bookings-grid">
       {bookings.length === 0 ? (
         <div style={{ padding: "80px 0", textAlign: "center", color: "#94A3B8" }}>
           <window.IconCalendar />
