@@ -16,26 +16,18 @@ const App = () => {
 
   // Rooms Data State
   const [rooms, setRooms] = React.useState(() => {
-    const saved = localStorage.getItem("zx_mobile_rooms_proto");
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
     return window.MOBILE_ROOMS;
   });
 
   // My Bookings Data State
   const [myBookings, setMyBookings] = React.useState(() => {
-    const saved = localStorage.getItem("zx_mobile_bookings_proto");
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
     return window.INITIAL_MY_BOOKINGS;
   });
 
   // Slot Selection: { roomId: '...', slots: [1, 2] }
   const [selectedSlots, setSelectedSlots] = React.useState({
     roomId: "m-room-1",
-    slots: [4, 5] // default 12:00-14:00
+    slots: [8, 9, 10] // default 12:00 - 13:30
   });
 
   // Modal States
@@ -50,20 +42,11 @@ const App = () => {
     }, 2500);
   };
 
-  // Sync state to local storage
-  React.useEffect(() => {
-    localStorage.setItem("zx_mobile_rooms_proto", JSON.stringify(rooms));
-  }, [rooms]);
-
-  React.useEffect(() => {
-    localStorage.setItem("zx_mobile_bookings_proto", JSON.stringify(myBookings));
-  }, [myBookings]);
-
   // Handle slot clicking
   const handleSelectSlot = (room, slotIdx) => {
     setSelectedSlots(prev => {
       if (prev && prev.roomId === room.id) {
-        // Toggle or expand
+        // Toggle or expand range
         if (prev.slots.includes(slotIdx)) {
           const nextSlots = prev.slots.filter(s => s !== slotIdx);
           return nextSlots.length > 0 ? { roomId: room.id, slots: nextSlots } : null;
@@ -87,9 +70,17 @@ const App = () => {
     if (selectedSlots && selectedSlots.roomId) {
       setRooms(prev => prev.map(r => {
         if (r.id === selectedSlots.roomId) {
+          const newEvent = {
+            start: newBooking.timeRange.split(" - ")[0],
+            end: newBooking.timeRange.split(" - ")[1],
+            slots: [...selectedSlots.slots],
+            title: newBooking.title,
+            host: "李明 (我)",
+            dept: "产品部"
+          };
           return {
             ...r,
-            busySlots: [...new Set([...r.busySlots, ...selectedSlots.slots])]
+            busyEvents: [...(r.busyEvents || []), newEvent]
           };
         }
         return r;
@@ -132,14 +123,16 @@ const App = () => {
         <span className="navbar-title">
           {activeTab === "reserve" ? "智能会议室" : "我的预定"}
         </span>
-        {activeTab === "reserve" && selectedSlots && (
+        {activeTab === "reserve" && selectedSlots && selectedSlots.slots.length > 0 ? (
           <button 
             className="navbar-action" 
-            style={{ fontWeight: 600 }}
+            style={{ fontWeight: 700, color: "var(--color-primary)" }}
             onClick={() => handleStartBooking()}
           >
             去预定
           </button>
+        ) : (
+          <div style={{ width: 40 }} />
         )}
       </div>
 
@@ -165,12 +158,12 @@ const App = () => {
             <window.MobileFilterStrip 
               filters={filters}
               onOpenFilterModal={(type) => {
-                showToast(`点击了${type === "building" ? "建筑楼层" : type === "capacity" ? "容纳人数" : "设备设施"}筛选`);
+                showToast(`切换「${type === "building" ? "建筑楼层" : type === "capacity" ? "容纳人数" : "设备设施"}」筛选`);
               }}
             />
 
             {/* 3. Rooms Time Slot Grid (对标钉钉 02 / 07 时段选择) */}
-            <div style={{ paddingBottom: 16 }}>
+            <div style={{ paddingBottom: 24 }}>
               {rooms.map(room => (
                 <window.MobileRoomCard
                   key={room.id}

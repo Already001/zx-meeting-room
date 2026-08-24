@@ -34,29 +34,50 @@ const MobileDateStrip = ({ selectedDate, onSelectDate }) => {
 // 2. Filter Strip Component
 const MobileFilterStrip = ({ filters, onOpenFilterModal }) => {
   return (
-    <div className="filter-strip">
-      <div 
-        className={`filter-chip ${filters.building !== "all" ? "active" : ""}`}
-        onClick={() => onOpenFilterModal("building")}
-      >
-        <span>{filters.building === "all" ? "建筑·楼层" : filters.building}</span>
-        <window.IconFilter />
+    <div>
+      <div className="filter-strip">
+        <div 
+          className={`filter-chip ${filters.building !== "all" ? "active" : ""}`}
+          onClick={() => onOpenFilterModal("building")}
+        >
+          <span>{filters.building === "all" ? "建筑·楼层" : filters.building}</span>
+          <window.IconFilter />
+        </div>
+
+        <div 
+          className={`filter-chip ${filters.capacity !== "all" ? "active" : ""}`}
+          onClick={() => onOpenFilterModal("capacity")}
+        >
+          <span>{filters.capacity === "all" ? "容纳人数" : filters.capacity}</span>
+          <window.IconFilter />
+        </div>
+
+        <div 
+          className={`filter-chip ${filters.facilities.length > 0 ? "active" : ""}`}
+          onClick={() => onOpenFilterModal("facilities")}
+        >
+          <span>{filters.facilities.length > 0 ? `设施(${filters.facilities.length})` : "设备设施"}</span>
+          <window.IconFilter />
+        </div>
       </div>
 
-      <div 
-        className={`filter-chip ${filters.capacity !== "all" ? "active" : ""}`}
-        onClick={() => onOpenFilterModal("capacity")}
-      >
-        <span>{filters.capacity === "all" ? "容纳人数" : filters.capacity}</span>
-        <window.IconFilter />
-      </div>
-
-      <div 
-        className={`filter-chip ${filters.facilities.length > 0 ? "active" : ""}`}
-        onClick={() => onOpenFilterModal("facilities")}
-      >
-        <span>{filters.facilities.length > 0 ? `设施(${filters.facilities.length})` : "设备设施"}</span>
-        <window.IconFilter />
+      {/* Visual Color Status Legend */}
+      <div className="timeline-legend-bar">
+        <span>时段状态 (08:00 - 22:00)</span>
+        <div className="legend-items-group">
+          <div className="legend-item">
+            <span className="legend-indicator free" />
+            <span>空闲</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-indicator busy" />
+            <span>已占用</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-indicator selected" />
+            <span>已选</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -65,22 +86,66 @@ const MobileFilterStrip = ({ filters, onOpenFilterModal }) => {
 // 3. Room List with Timeline Card
 const MobileRoomCard = ({ room, onSelectSlot, onOpenDetail, selectedSlots }) => {
   const isSelectedRoom = selectedSlots && selectedSlots.roomId === room.id;
+  const [activeBusyEvent, setActiveBusyEvent] = React.useState(null);
+
+  // Derive total busy slots
+  const allBusySlots = React.useMemo(() => {
+    const slots = [];
+    (room.busyEvents || []).forEach(evt => {
+      slots.push(...evt.slots);
+    });
+    return slots;
+  }, [room.busyEvents]);
+
+  // Check occupancy summary
+  const totalSlotsCount = window.HALF_HOUR_COUNT || 28;
+  const busyCount = allBusySlots.length;
+  const isFullyBooked = busyCount >= 20;
+  const isFreeNow = !allBusySlots.includes(4); // e.g. 10:00 slot
+
+  // Format current selection range text
+  const selectionTimeText = React.useMemo(() => {
+    if (!isSelectedRoom || !selectedSlots.slots || selectedSlots.slots.length === 0) return null;
+    const sorted = [...selectedSlots.slots].sort((a,b) => a-b);
+    const first = window.getSlotTimeRange(sorted[0]);
+    const last = window.getSlotTimeRange(sorted[sorted.length - 1]);
+    const hours = (sorted.length * 0.5).toFixed(1).replace(".0", "");
+    return `${first.start} - ${last.end} (共 ${hours} 小时)`;
+  }, [isSelectedRoom, selectedSlots]);
 
   return (
     <div className="room-timeline-card">
+      {/* Header Info */}
       <div className="room-card-header">
         <div>
           <div className="room-name-title">
             <span>{room.name}</span>
-            {room.needApproval && <span className="room-tag" style={{ background: '#FFF7E6', color: '#FA8C16' }}>需审批</span>}
+            {room.needApproval && (
+              <span className="room-tag" style={{ background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A' }}>
+                需审批
+              </span>
+            )}
+            <span className={`room-status-badge ${isFullyBooked ? 'busy' : isFreeNow ? 'free' : 'approving'}`}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
+              {isFullyBooked ? "今日爆满" : isFreeNow ? "当前空闲" : "使用中"}
+            </span>
           </div>
+
           <div className="room-card-sub">
-            {room.building} {room.floor} · {room.capacity}人 · {room.facilities.join("/")}
+            <window.IconLocation />
+            <span>{room.building} {room.floor} · 容纳 {room.capacity} 人</span>
+          </div>
+
+          <div className="room-facilities-pills">
+            {room.facilities.map(f => (
+              <span key={f} className="facility-pill">{f}</span>
+            ))}
           </div>
         </div>
+
         <button 
           className="navbar-action" 
-          style={{ fontSize: 13 }}
+          style={{ fontSize: 13, color: "var(--color-primary)", fontWeight: 500 }}
           onClick={() => onOpenDetail(room)}
         >
           详情
@@ -92,31 +157,61 @@ const MobileRoomCard = ({ room, onSelectSlot, onOpenDetail, selectedSlots }) => 
       <div className="timeline-scale-wrap">
         <div className="timeline-hours-axis">
           <span>08:00</span>
-          <span>12:00</span>
-          <span>16:00</span>
-          <span>20:00</span>
-          <span>23:00</span>
+          <span>11:30</span>
+          <span>15:00</span>
+          <span>18:30</span>
+          <span>22:00</span>
         </div>
 
-        <div className="timeline-grid-slots">
-          {Array.from({ length: 15 }).map((_, idx) => {
-            const isBusy = room.busySlots.includes(idx);
+        <div className="timeline-track-rail">
+          {Array.from({ length: totalSlotsCount }).map((_, idx) => {
+            const busyEvent = (room.busyEvents || []).find(e => e.slots.includes(idx));
+            const isBusy = Boolean(busyEvent);
             const isSelected = isSelectedRoom && selectedSlots.slots.includes(idx);
+            const timeInfo = window.getSlotTimeRange(idx);
 
             return (
               <div
                 key={idx}
-                className={`timeline-slot ${isBusy ? "busy" : isSelected ? "selected" : "free"}`}
+                className={`timeline-cell ${isBusy ? "busy" : isSelected ? "selected" : "free"}`}
                 onClick={() => {
-                  if (!isBusy) {
+                  if (isBusy) {
+                    // Show who is occupying this slot
+                    setActiveBusyEvent(prev => prev && prev.title === busyEvent.title ? null : busyEvent);
+                  } else {
+                    setActiveBusyEvent(null);
                     onSelectSlot(room, idx);
                   }
                 }}
-                title={isBusy ? "已占用" : `可预定 (${8 + idx}:00 - ${9 + idx}:00)`}
+                title={isBusy ? `占用：${busyEvent.title} (${busyEvent.start}-${busyEvent.end})` : `可预定：${timeInfo.start}-${timeInfo.end}`}
               />
             );
           })}
         </div>
+
+        {/* Dynamic Occupancy Inspector Tooltip */}
+        {activeBusyEvent && (
+          <div className="occupancy-preview-bubble">
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <window.IconClock />
+              <span><strong>{activeBusyEvent.start}-{activeBusyEvent.end}</strong> 已被「{activeBusyEvent.title}」占用</span>
+            </div>
+            <span style={{ opacity: 0.85, fontSize: 11 }}>发起人: {activeBusyEvent.host}</span>
+          </div>
+        )}
+
+        {/* Current Active Selection Summary */}
+        {isSelectedRoom && selectionTimeText && (
+          <div className="selection-quick-summary" style={{ flexWrap: 'wrap', gap: '4px' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563EB", flexShrink: 0 }} />
+              <span>已选时段：<strong>{selectionTimeText}</strong></span>
+            </div>
+            <span style={{ fontWeight: 600, color: "#2563EB", cursor: "pointer", marginLeft: "auto" }} onClick={() => onSelectSlot(room, null)}>
+              去预定 →
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -129,6 +224,7 @@ const MobileRoomDetailModal = ({ room, isOpen, onClose, onBookNow }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
+        <div className="sheet-drag-handle" />
         <div className="sheet-header">
           <span className="sheet-title">会议室详情</span>
           <button className="navbar-action" onClick={onClose}>关闭</button>
@@ -138,7 +234,7 @@ const MobileRoomDetailModal = ({ room, isOpen, onClose, onBookNow }) => {
           <div className="form-group-card">
             <div className="form-cell">
               <span className="form-cell-label">会议室名称</span>
-              <span className="form-cell-value" style={{ fontWeight: 600 }}>{room.name}</span>
+              <span className="form-cell-value" style={{ fontWeight: 700 }}>{room.name}</span>
             </div>
             <div className="form-cell">
               <span className="form-cell-label">所在位置</span>
@@ -149,12 +245,12 @@ const MobileRoomDetailModal = ({ room, isOpen, onClose, onBookNow }) => {
               <span className="form-cell-value">{room.capacity} 人</span>
             </div>
             <div className="form-cell">
-              <span className="form-cell-label">门牌/备注</span>
+              <span className="form-cell-label">门牌/位置指引</span>
               <span className="form-cell-value">{room.locationNote || "无"}</span>
             </div>
           </div>
 
-          <div style={{ fontSize: 13, color: "var(--color-mute)", margin: "12px 4px 6px" }}>设备设施</div>
+          <div style={{ fontSize: 13, color: "#64748B", margin: "14px 4px 6px", fontWeight: 600 }}>设备设施</div>
           <div className="form-group-card">
             <div className="form-cell">
               <span className="form-cell-label">支持设备</span>
@@ -162,7 +258,7 @@ const MobileRoomDetailModal = ({ room, isOpen, onClose, onBookNow }) => {
             </div>
           </div>
 
-          <div style={{ fontSize: 13, color: "var(--color-mute)", margin: "12px 4px 6px" }}>预定规则 (对标钉钉)</div>
+          <div style={{ fontSize: 13, color: "#64748B", margin: "14px 4px 6px", fontWeight: 600 }}>预定与占用规则</div>
           <div className="form-group-card">
             <div className="form-cell">
               <span className="form-cell-label">开放时间</span>
@@ -196,9 +292,13 @@ const MobileCreateScheduleModal = ({ room, selectedSlots, isOpen, onClose, onSub
   const [title, setTitle] = React.useState("项目周会对齐");
   const [remarks, setRemarks] = React.useState("");
 
-  const startHour = selectedSlots && selectedSlots.slots.length > 0 ? 8 + Math.min(...selectedSlots.slots) : 10;
-  const endHour = selectedSlots && selectedSlots.slots.length > 0 ? 8 + Math.max(...selectedSlots.slots) + 1 : 11;
-  const timeStr = `${String(startHour).padStart(2, "0")}:00 - ${String(endHour).padStart(2, "0")}:00`;
+  const timeStr = React.useMemo(() => {
+    if (!selectedSlots || !selectedSlots.slots || selectedSlots.slots.length === 0) return "10:00 - 11:30";
+    const sorted = [...selectedSlots.slots].sort((a,b) => a-b);
+    const first = window.getSlotTimeRange(sorted[0]);
+    const last = window.getSlotTimeRange(sorted[sorted.length - 1]);
+    return `${first.start} - ${last.end}`;
+  }, [selectedSlots]);
 
   const handleSubmit = () => {
     onSubmitSuccess({
@@ -220,10 +320,11 @@ const MobileCreateScheduleModal = ({ room, selectedSlots, isOpen, onClose, onSub
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="bottom-sheet" onClick={e => e.stopPropagation()} style={{ height: "90%" }}>
+        <div className="sheet-drag-handle" />
         <div className="sheet-header">
-          <button className="navbar-action" onClick={onClose} style={{ color: "var(--color-sub)" }}>取消</button>
+          <button className="navbar-action" onClick={onClose} style={{ color: "#64748B" }}>取消</button>
           <span className="sheet-title">新建日程预定</span>
-          <button className="navbar-action" onClick={handleSubmit} style={{ fontWeight: 600 }}>完成</button>
+          <button className="navbar-action" onClick={handleSubmit} style={{ fontWeight: 700 }}>完成</button>
         </div>
 
         <div className="sheet-body">
@@ -235,7 +336,7 @@ const MobileCreateScheduleModal = ({ room, selectedSlots, isOpen, onClose, onSub
                 placeholder="填写会议主题..."
                 value={title}
                 onChange={e => setTitle(e.target.value)}
-                style={{ fontSize: 16, fontWeight: 500 }}
+                style={{ fontSize: 16, fontWeight: 600 }}
               />
             </div>
           </div>
@@ -243,13 +344,13 @@ const MobileCreateScheduleModal = ({ room, selectedSlots, isOpen, onClose, onSub
           <div className="form-group-card">
             <div className="form-cell">
               <span className="form-cell-label">会议室</span>
-              <span className="form-cell-value" style={{ color: "var(--color-primary)", fontWeight: 500 }}>
+              <span className="form-cell-value" style={{ color: "var(--color-primary)", fontWeight: 600 }}>
                 {room.name} ({room.building} {room.floor})
               </span>
             </div>
             <div className="form-cell">
               <span className="form-cell-label">预定时段</span>
-              <span className="form-cell-value" style={{ fontWeight: 500 }}>
+              <span className="form-cell-value" style={{ fontWeight: 600, color: "#1E40AF" }}>
                 今天 08-24 · {timeStr}
               </span>
             </div>
@@ -293,29 +394,31 @@ const MobileMyBookingsView = ({ bookings, onReleaseBooking }) => {
   return (
     <div style={{ padding: 12 }}>
       {bookings.length === 0 ? (
-        <div style={{ padding: "60px 0", textAlign: "center", color: "var(--color-mute)" }}>
+        <div style={{ padding: "80px 0", textAlign: "center", color: "#94A3B8" }}>
           <window.IconCalendar />
-          <div style={{ marginTop: 8, fontSize: 14 }}>暂无预定日程</div>
+          <div style={{ marginTop: 10, fontSize: 14 }}>暂无预定日程</div>
         </div>
       ) : (
         bookings.map(b => (
-          <div key={b.id} className="form-group-card" style={{ padding: 16, marginBottom: 12 }}>
+          <div key={b.id} className="room-timeline-card" style={{ padding: 16, marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--color-ink)" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#0F172A" }}>
                 {b.title}
               </div>
               <span 
-                className="room-tag" 
+                className="room-status-badge" 
                 style={{ 
-                  background: b.status === "ongoing" ? "#EAFAF3" : "#EBF2FF",
-                  color: b.status === "ongoing" ? "#36D18E" : "#3E7EFF"
+                  background: b.status === "ongoing" ? "#ECFDF5" : "#EFF6FF",
+                  color: b.status === "ongoing" ? "#059669" : "#2563EB",
+                  border: b.status === "ongoing" ? "1px solid #A7F3D0" : "1px solid #BFDBFE"
                 }}
               >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
                 {b.status === "ongoing" ? "进行中" : "待开始"}
               </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "12px 0", fontSize: 13, color: "var(--color-sub)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "14px 0", fontSize: 13, color: "#475569" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <window.IconClock />
                 <span>{b.date} {b.timeRange}</span>
@@ -330,13 +433,12 @@ const MobileMyBookingsView = ({ bookings, onReleaseBooking }) => {
               </div>
             </div>
 
-            <div style={{ borderTop: "1px solid var(--color-hairline)", paddingTop: 12, display: "flex", gap: 10 }}>
+            <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 12, display: "flex", gap: 10 }}>
               <button 
                 className="btn-m-danger" 
-                style={{ height: 36, fontSize: 13 }}
                 onClick={() => onReleaseBooking(b)}
               >
-                提前释放
+                提前释放会议室
               </button>
             </div>
           </div>
