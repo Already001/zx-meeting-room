@@ -1,223 +1,352 @@
-// Main Reservation Prototype App (mobile + PC)
+// 智信 · 智能会议室预定原型（移动端对齐钉钉交互 + PC 时间轴看板）
+
+const WEEK_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const BASE_DATE = new Date(2026, 7, 25);
+
+const toIso = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const formatDateLabel = (date) => `${toIso(date)} (${WEEK_LABELS[date.getDay()]})`;
+
+const buildDays = (base, count) =>
+  Array.from({ length: count }, (_, i) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + i);
+    return {
+      value: toIso(d),
+      week: i === 0 ? "今天" : i === 1 ? "明天" : WEEK_LABELS[d.getDay()],
+      day: `${d.getMonth() + 1}/${d.getDate()}`,
+      short: `${d.getMonth() + 1}月${d.getDate()}日`
+    };
+  });
+
+const useIsPc = () => {
+  const query = "(min-width: 1024px)";
+  const [isPc, setIsPc] = React.useState(() => window.matchMedia(query).matches);
+  React.useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = (e) => setIsPc(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return isPc;
+};
 
 const App = () => {
+  const isPc = useIsPc();
+
   const [activeTab, setActiveTab] = React.useState("reserve");
-  const [selectedDate, setSelectedDate] = React.useState("2026-08-24");
-  const [filters, setFilters] = React.useState({
-    building: "all",
-    capacity: "all",
-    facilities: []
-  });
+  const [boardDate, setBoardDate] = React.useState(() => new Date(BASE_DATE));
   const [rooms, setRooms] = React.useState(() => window.MOBILE_ROOMS);
   const [myBookings, setMyBookings] = React.useState(() => window.INITIAL_MY_BOOKINGS);
-  const [selectedSlots, setSelectedSlots] = React.useState({
-    roomId: "m-room-1",
-    slots: [8, 9, 10]
-  });
-  const [detailRoom, setDetailRoom] = React.useState(null);
-  const [bookingTargetRoom, setBookingTargetRoom] = React.useState(null);
   const [toastMsg, setToastMsg] = React.useState(null);
+
+  const [filters, setFilters] = React.useState({ place: "all", capacity: "all", facilities: [] });
+  const [filterSheet, setFilterSheet] = React.useState(null);
+
+  // 移动端与 PC 共用一份时间轴选择：{ roomId, start, end }
+  const [selection, setSelection] = React.useState(null);
+  const [showHost, setShowHost] = React.useState(false);
+  const [showLegend, setShowLegend] = React.useState(false);
+
+  const [detailRoom, setDetailRoom] = React.useState(null);
+  const [occupancy, setOccupancy] = React.useState(null);
+  const [confirmPayload, setConfirmPayload] = React.useState(null);
+  const [bookingTargetRoom, setBookingTargetRoom] = React.useState(null);
+  const [bookingRangeText, setBookingRangeText] = React.useState(null);
+
+  const days = React.useMemo(() => buildDays(BASE_DATE, 14), []);
+  const selectedDate = toIso(boardDate);
+  const selectedDay = days.find(d => d.value === selectedDate);
+  const dateShort = selectedDay ? selectedDay.short : toIso(boardDate);
+  const dateLabel = formatDateLabel(boardDate);
 
   const showToast = (msg) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 2500);
+    setTimeout(() => setToastMsg(null), 2400);
   };
 
-  const handleSelectSlot = (room, slotIdx) => {
-    if (slotIdx === null || slotIdx === undefined) return;
-    setSelectedSlots(prev => {
-      if (prev && prev.roomId === room.id) {
-        if (prev.slots.includes(slotIdx)) {
-          const nextSlots = prev.slots.filter(s => s !== slotIdx);
-          return nextSlots.length > 0 ? { roomId: room.id, slots: nextSlots } : null;
-        }
-        return { roomId: room.id, slots: [...prev.slots, slotIdx].sort((a, b) => a - b) };
+  const places = React.useMemo(() => {
+    const set = new Set(rooms.map(r => `${r.building} ${r.floor}`));
+    return Array.from(set);
+  }, [rooms]);
+
+  const visibleRooms = React.useMemo(() => rooms.filter(room => {
+    if (filters.place !== "all" && `${room.building} ${room.floor}` !== filters.place) return false;
+    if (filters.capacity !== "all") {
+      const option = window.CAPACITY_OPTIONS.find(c => c.id === filters.capacity);
+      if (option && option.min !== undefined) {
+        if (room.capacity < option.min || room.capacity > option.max) return false;
       }
-      return { roomId: room.id, slots: [slotIdx] };
+    }
+    if (filters.facilities.length > 0 && !filters.facilities.every(f => room.facilities.includes(f))) return false;
+    return true;
+  }), [rooms, filters]);
+
+  const selectedRoom = selection ? rooms.find(r => r.id === selection.roomId) : null;
+
+  const shiftDay = (delta) => {
+    setBoardDate(prev => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + delta);
+      return next;
     });
+    setSelection(null);
   };
 
-  const handleStartBooking = (room) => {
-    setBookingTargetRoom(room || (selectedSlots ? rooms.find(r => r.id === selectedSlots.roomId) : rooms[0]));
+  const openBooking = (room, range) => {
+    setBookingRangeText(range);
+    setBookingTargetRoom(room);
+  };
+
+  const handleCommitRange = (room, picked) => {
+    openBooking(room, `${window.fromMinutes(picked.start)} - ${window.fromMinutes(picked.end)}`);
+  };
+
+  const handleQuickDuration = (minutes) => {
+    setSelection(prev => {
+      if (!prev || !selectedRoom) return prev;
+      const [, high] = window.TL.freeBounds(selectedRoom, Math.floor((prev.start + prev.end) / 2));
+      return { ...prev, end: Math.min(high, prev.start + minutes) };
+    });
   };
 
   const handleBookingSuccess = (newBooking) => {
     setMyBookings(prev => [newBooking, ...prev]);
-    if (selectedSlots && selectedSlots.roomId) {
-      setRooms(prev => prev.map(r => {
-        if (r.id !== selectedSlots.roomId) return r;
-        return {
-          ...r,
-          busyEvents: [...(r.busyEvents || []), {
-            start: newBooking.timeRange.split(" - ")[0],
-            end: newBooking.timeRange.split(" - ")[1],
-            slots: [...selectedSlots.slots],
-            title: newBooking.title,
-            host: "李明 (我)",
-            dept: "产品部"
-          }]
-        };
-      }));
-    }
+
+    const targetRoomId = bookingTargetRoom ? bookingTargetRoom.id : null;
+    const [startText, endText] = newBooking.timeRange.split(" - ");
+
+    setRooms(prev => prev.map(r => {
+      if (r.id !== targetRoomId) return r;
+      return {
+        ...r,
+        busyEvents: [...(r.busyEvents || []), window.makeEvent({
+          start: startText,
+          end: endText,
+          title: newBooking.title,
+          host: "李明",
+          dept: "产品部",
+          mine: true
+        })]
+      };
+    }));
+
     setBookingTargetRoom(null);
+    setBookingRangeText(null);
     setDetailRoom(null);
-    showToast("预定成功！已加入「我的预定」");
+    setSelection(null);
+    showToast("预定成功，已加入「我的预定」");
     setActiveTab("my");
   };
 
-  const handleReleaseBooking = (booking) => {
+  const releaseBooking = (booking) => {
     setMyBookings(prev => prev.filter(b => b.id !== booking.id));
+    setRooms(prev => prev.map(r => {
+      if (r.id !== booking.roomId) return r;
+      return {
+        ...r,
+        busyEvents: (r.busyEvents || []).filter(ev => !(ev.mine && `${ev.start} - ${ev.end}` === booking.timeRange))
+      };
+    }));
+    setConfirmPayload(null);
     showToast("会议室已提前释放");
   };
 
-  const pageTitle = activeTab === "reserve" ? "预定会议室" : "我的预定";
+  const askRelease = (booking) => {
+    setConfirmPayload({
+      title: "释放会议室",
+      message: `${booking.roomName} ${booking.timeRange}，释放后其他人可预定该时段。`,
+      confirmText: "确认释放",
+      onConfirm: () => releaseBooking(booking)
+    });
+  };
 
-  return (
-    <div className="device-wrapper">
-      <aside className="pc-sidenav">
-        <div className="pc-sidenav-logo" aria-hidden="true">
-          <window.IconCalendar />
-        </div>
-        <button
-          type="button"
-          className={`pc-nav-item ${activeTab === "reserve" ? "active" : ""}`}
-          onClick={() => setActiveTab("reserve")}
-        >
-          <window.IconCalendar />
-          <span>预定</span>
-        </button>
-        <button
-          type="button"
-          className={`pc-nav-item ${activeTab === "my" ? "active" : ""}`}
-          onClick={() => setActiveTab("my")}
-        >
-          <window.IconUser />
-          <span>我的</span>
-        </button>
-      </aside>
+  const handleOpenRoomDetail = (room) => setDetailRoom(room);
 
-      <div className="app-column">
-        <header className="pc-topbar">
-          <div className="pc-topbar-brand">
-            <strong>智信 · 智能会议室</strong>
-            <span className="pc-topbar-chip">PC WebView (zx) / 浏览器 (main)</span>
-          </div>
-          <div className="pc-topbar-user">
-            <span>企业：<b style={{ color: "#1F2329", fontWeight: 500 }}>创新科技集团 (corpId: zx-001)</b></span>
-            <div className="pc-avatar">李</div>
-          </div>
-        </header>
+  const handleBookFromDetail = (room) => {
+    setDetailRoom(null);
+    if (selection && selection.roomId === room.id) {
+      openBooking(room, `${window.fromMinutes(selection.start)} - ${window.fromMinutes(selection.end)}`);
+      return;
+    }
+    showToast("请先在时间轴上轻点选择空闲时段");
+  };
 
-        <div className="phone-top-bar">
-          <span className="top-time">9:41</span>
-          <div className="top-icons">
-            <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor">
-              <rect x="0" y="7.5" width="3" height="4.5" rx="1" />
-              <rect x="4.5" y="5" width="3" height="7" rx="1" />
-              <rect x="9" y="2.5" width="3" height="9.5" rx="1" />
-              <rect x="13.5" y="0" width="3" height="12" rx="1" />
-            </svg>
-            <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor">
-              <rect x="1" y="1" width="20" height="10" rx="3" strokeWidth="1" />
-              <rect x="3" y="3" width="14" height="6" rx="1.5" fill="currentColor" />
-            </svg>
-          </div>
-        </div>
+  // 弹层都按需挂载，保证每次打开都是干净的表单状态
+  const sharedModals = (
+    <React.Fragment>
+      {detailRoom && (
+        <window.MobileRoomDetailModal
+          room={detailRoom}
+          onClose={() => setDetailRoom(null)}
+          onBookNow={handleBookFromDetail}
+        />
+      )}
+      {bookingTargetRoom && (
+        <window.MobileCreateScheduleModal
+          room={bookingTargetRoom}
+          rangeText={bookingRangeText}
+          dateLabel={dateShort}
+          fullScreen={!isPc}
+          onClose={() => {
+            setBookingTargetRoom(null);
+            setBookingRangeText(null);
+          }}
+          onSubmitSuccess={handleBookingSuccess}
+        />
+      )}
+      {confirmPayload && (
+        <window.MobileConfirmSheet
+          payload={confirmPayload}
+          onCancel={() => setConfirmPayload(null)}
+        />
+      )}
+    </React.Fragment>
+  );
 
-        <div className="mobile-navbar">
-          <span className="navbar-title">{pageTitle}</span>
-          {activeTab === "reserve" && selectedSlots && selectedSlots.slots.length > 0 ? (
-            <button
-              type="button"
-              className="navbar-action navbar-book-btn"
-              onClick={() => handleStartBooking()}
-            >
-              去预定
-            </button>
-          ) : (
-            <div style={{ width: 40 }} />
-          )}
-        </div>
+  const toast = toastMsg ? (
+    <div className="mobile-toast">
+      <window.IconCheck />
+      <span>{toastMsg}</span>
+    </div>
+  ) : null;
 
-        {toastMsg && (
-          <div className="mobile-toast">
-            <window.IconCheck />
-            <span>{toastMsg}</span>
+  if (isPc) {
+    return (
+      <div className="pc-app">
+        <window.PcToolbar
+          dateLabel={dateLabel}
+          onPrevDay={() => shiftDay(-1)}
+          onNextDay={() => shiftDay(1)}
+          onToday={() => {
+            setBoardDate(new Date(BASE_DATE));
+            setSelection(null);
+          }}
+          showHost={showHost}
+          onToggleHost={() => setShowHost(v => !v)}
+          showLegend={showLegend}
+          onToggleLegend={() => setShowLegend(v => !v)}
+          onOpenMine={() => setActiveTab(activeTab === "my" ? "reserve" : "my")}
+          onNotice={showToast}
+        />
+
+        {toast}
+
+        {activeTab === "reserve" ? (
+          <window.PcTimelineBoard
+            rooms={visibleRooms}
+            selection={selection}
+            setSelection={setSelection}
+            showHost={showHost}
+            onCommit={handleCommitRange}
+            onNotice={showToast}
+          />
+        ) : (
+          <div className="pc-bookings-page">
+            <div className="pc-page-head">
+              <h2>我的预定</h2>
+              <button type="button" className="pc-text-btn" onClick={() => setActiveTab("reserve")}>
+                返回预定看板
+              </button>
+            </div>
+            <window.MobileMyBookingsView bookings={myBookings} onReleaseBooking={askRelease} />
           </div>
         )}
 
-        <div className="screen-scroll-container">
-          {activeTab === "reserve" ? (
-            <div>
-              <div className="pc-sticky-toolbar">
-                <window.MobileDateStrip
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                />
-                <window.MobileFilterStrip
-                  filters={filters}
-                  onOpenFilterModal={(type) => {
-                    showToast(`切换「${type === "building" ? "建筑楼层" : type === "capacity" ? "容纳人数" : "设备设施"}」筛选`);
-                  }}
-                />
-              </div>
-
-              <div className="pc-content-wrap">
-                {rooms.map(room => (
-                  <window.MobileRoomCard
-                    key={room.id}
-                    room={room}
-                    selectedSlots={selectedSlots}
-                    onSelectSlot={handleSelectSlot}
-                    onStartBooking={handleStartBooking}
-                    onOpenDetail={(r) => setDetailRoom(r)}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <window.MobileMyBookingsView
-              bookings={myBookings}
-              onReleaseBooking={handleReleaseBooking}
-            />
-          )}
-        </div>
-
-        <div className="mobile-tabbar">
-          <div
-            className={`tab-item ${activeTab === "reserve" ? "active" : ""}`}
-            onClick={() => setActiveTab("reserve")}
-          >
-            <window.IconCalendar />
-            <span>预定会议室</span>
-          </div>
-          <div
-            className={`tab-item ${activeTab === "my" ? "active" : ""}`}
-            onClick={() => setActiveTab("my")}
-          >
-            <window.IconUser />
-            <span>我的预定</span>
-          </div>
-        </div>
-
-        <window.MobileRoomDetailModal
-          room={detailRoom}
-          isOpen={Boolean(detailRoom)}
-          onClose={() => setDetailRoom(null)}
-          onBookNow={(r) => {
-            setDetailRoom(null);
-            handleStartBooking(r);
-          }}
-        />
-
-        <window.MobileCreateScheduleModal
-          room={bookingTargetRoom}
-          selectedSlots={selectedSlots}
-          isOpen={Boolean(bookingTargetRoom)}
-          onClose={() => setBookingTargetRoom(null)}
-          onSubmitSuccess={handleBookingSuccess}
-        />
+        {sharedModals}
       </div>
+    );
+  }
+
+  return (
+    <div className="m-app">
+      <div className="m-navbar">
+        {activeTab === "my" ? (
+          <button type="button" className="m-nav-back" onClick={() => setActiveTab("reserve")}>
+            <window.IconChevronLeft />
+          </button>
+        ) : (
+          <span className="m-nav-side" />
+        )}
+
+        <span className="m-nav-title">{activeTab === "reserve" ? "预定会议室" : "我的预定"}</span>
+
+        {activeTab === "reserve" ? (
+          <button type="button" className="m-nav-link" onClick={() => setActiveTab("my")}>我的预定</button>
+        ) : (
+          <span className="m-nav-side" />
+        )}
+      </div>
+
+      {toast}
+
+      {activeTab === "reserve" ? (
+        <div className="m-page">
+          <window.MobileDateBar
+            days={days}
+            selectedDate={selectedDate}
+            onSelectDate={(value) => {
+              const next = days.find(d => d.value === value);
+              if (!next) return;
+              setBoardDate(new Date(`${value}T00:00:00`));
+              setSelection(null);
+            }}
+            onOpenCalendar={() => showToast("打开日历选择更多日期")}
+          />
+
+          <window.MobileFilterBar filters={filters} onOpen={setFilterSheet} />
+
+          <window.MobileTimelineBoard
+            rooms={visibleRooms}
+            selection={selection}
+            setSelection={setSelection}
+            onTapEvent={(room, event) => setOccupancy({ room, event })}
+            onOpenRoom={handleOpenRoomDetail}
+            onNotice={showToast}
+          />
+
+          <window.MobileSelectionBar
+            room={selectedRoom}
+            selection={selection}
+            dateText={dateShort}
+            onCancel={() => setSelection(null)}
+            onQuickDuration={handleQuickDuration}
+            onBook={() => {
+              if (!selectedRoom || !selection) return;
+              openBooking(selectedRoom, `${window.fromMinutes(selection.start)} - ${window.fromMinutes(selection.end)}`);
+            }}
+          />
+        </div>
+      ) : (
+        <div className="m-page m-page-scroll">
+          <window.MobileMyBookingsView bookings={myBookings} onReleaseBooking={askRelease} />
+        </div>
+      )}
+
+      {filterSheet && (
+        <window.MobileFilterSheet
+          type={filterSheet}
+          filters={filters}
+          places={places}
+          onApply={(next) => {
+            setFilters(next);
+            setFilterSheet(null);
+            setSelection(null);
+          }}
+          onClose={() => setFilterSheet(null)}
+        />
+      )}
+
+      {occupancy && (
+        <window.MobileOccupancySheet payload={occupancy} onClose={() => setOccupancy(null)} />
+      )}
+
+      {sharedModals}
     </div>
   );
 };
