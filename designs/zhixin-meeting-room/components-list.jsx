@@ -1,6 +1,6 @@
 // Room List Page Component
 
-const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) => {
+const RoomListPage = ({ rooms, dicts, onNavigateNew, onNavigateEdit, onToggleEnable }) => {
   const [keyword, setKeyword] = React.useState("");
   const [debouncedKeyword, setDebouncedKeyword] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
@@ -18,12 +18,12 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
   }, [keyword]);
 
   const availableBuildings = React.useMemo(() => {
-    const set = new Set();
+    const set = new Set(window.dictNames(dicts, "building"));
     rooms.forEach(r => {
       if (r.buildingName) set.add(r.buildingName);
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "zh-CN"));
-  }, [rooms]);
+    return Array.from(set);
+  }, [rooms, dicts]);
 
   const availableFloors = React.useMemo(() => {
     const set = new Set();
