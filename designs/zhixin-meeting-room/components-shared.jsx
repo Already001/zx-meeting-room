@@ -1,6 +1,11 @@
 // UI Shell & Shared Components
 
-const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => {
+const AppShell = ({ activeNav = "rooms", onNavigate, children, userName = "管理员" }) => {
+  const navItems = [
+    { id: "rooms", label: "会议室", icon: <window.IconMeetingRoom /> },
+    { id: "dicts", label: "字典表", icon: <window.IconDict /> }
+  ];
+
   return (
     <div className="app-shell">
       <a className="sr-only" href="#main-content">跳到主内容</a>
@@ -10,15 +15,19 @@ const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => 
         </div>
 
         <nav className="app-sidenav-nav" aria-label="主导航">
-          <button
-            type="button"
-            className={`app-sidenav-item${activeNav === "rooms" ? " is-active" : ""}`}
-            aria-current={activeNav === "rooms" ? "page" : undefined}
-          >
-            {activeNav === "rooms" && <span className="app-sidenav-indicator" />}
-            <window.IconMeetingRoom />
-            <span className="app-sidenav-label">会议室</span>
-          </button>
+          {navItems.map(item => (
+            <button
+              type="button"
+              key={item.id}
+              className={`app-sidenav-item${activeNav === item.id ? " is-active" : ""}`}
+              aria-current={activeNav === item.id ? "page" : undefined}
+              onClick={() => onNavigate && onNavigate(item.id)}
+            >
+              {activeNav === item.id && <span className="app-sidenav-indicator" />}
+              {item.icon}
+              <span className="app-sidenav-label">{item.label}</span>
+            </button>
+          ))}
         </nav>
       </aside>
 

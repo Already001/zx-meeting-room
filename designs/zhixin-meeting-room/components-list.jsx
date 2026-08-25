@@ -176,9 +176,7 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
                     <td>{room.floorName}</td>
                     <td className="col-num">{room.capacity}人</td>
                     <td className="col-sm">
-                      {room.facilities && room.facilities.length > 0
-                        ? window.FACILITY_OPTIONS.filter(f => room.facilities.includes(f)).join(" / ")
-                        : "—"}
+                      {window.formatFacilities(room.facilities, dicts)}
                     </td>
                     <td className="col-sm col-num">
                       {room.openStart} - {room.openEnd}
