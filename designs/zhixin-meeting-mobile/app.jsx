@@ -16,11 +16,15 @@ const buildDays = (base, count) =>
   Array.from({ length: count }, (_, i) => {
     const d = new Date(base);
     d.setDate(d.getDate() + i);
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const date = String(d.getDate()).padStart(2, "0");
     return {
       value: toIso(d),
       week: i === 0 ? "今天" : i === 1 ? "明天" : WEEK_LABELS[d.getDay()],
+      weekday: WEEK_LABELS[d.getDay()],
       day: `${d.getMonth() + 1}/${d.getDate()}`,
-      short: `${d.getMonth() + 1}月${d.getDate()}日`
+      short: `${d.getMonth() + 1}月${d.getDate()}日`,
+      chip: `${month}月${date}日 ${WEEK_LABELS[d.getDay()]}`
     };
   });
 
@@ -46,7 +50,9 @@ const App = () => {
   const [toastMsg, setToastMsg] = React.useState(null);
 
   const [filters, setFilters] = React.useState({ place: "all", capacity: "all", facilities: [] });
+  const [keyword, setKeyword] = React.useState("");
   const [filterSheet, setFilterSheet] = React.useState(null);
+  const [showMore, setShowMore] = React.useState(false);
 
   // 移动端与 PC 共用一份时间轴选择：{ roomId, start, end }
   const [selection, setSelection] = React.useState(null);
@@ -63,7 +69,9 @@ const App = () => {
   const selectedDate = toIso(boardDate);
   const selectedDay = days.find(d => d.value === selectedDate);
   const dateShort = selectedDay ? selectedDay.short : toIso(boardDate);
+  const dateChip = selectedDay ? selectedDay.chip : dateShort;
   const dateLabel = formatDateLabel(boardDate);
+  const isToday = selectedDate === toIso(BASE_DATE);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -84,10 +92,20 @@ const App = () => {
       }
     }
     if (filters.facilities.length > 0 && !filters.facilities.every(f => room.facilities.includes(f))) return false;
+    const q = keyword.trim().toLowerCase();
+    if (q) {
+      const hay = `${room.name} ${room.building} ${room.floor}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
-  }), [rooms, filters]);
+  }), [rooms, filters, keyword]);
 
   const selectedRoom = selection ? rooms.find(r => r.id === selection.roomId) : null;
+
+  React.useEffect(() => {
+    if (!selection) return;
+    if (!visibleRooms.some(r => r.id === selection.roomId)) setSelection(null);
+  }, [visibleRooms, selection]);
 
   const shiftDay = (delta) => {
     setBoardDate(prev => {
@@ -111,7 +129,7 @@ const App = () => {
     setSelection(prev => {
       if (!prev || !selectedRoom) return prev;
       const [, high] = window.TL.freeBounds(selectedRoom, Math.floor((prev.start + prev.end) / 2));
-      return { ...prev, end: Math.min(high, prev.start + minutes) };
+      return { ...prev, end: Math.min(high, window.TL.LIST_END, prev.start + minutes) };
     });
   };
 
@@ -174,7 +192,7 @@ const App = () => {
       openBooking(room, `${window.fromMinutes(selection.start)} - ${window.fromMinutes(selection.end)}`);
       return;
     }
-    showToast("请先在时间轴上轻点选择空闲时段");
+    showToast("请先在时间条上轻点选择空闲时段");
   };
 
   // 弹层都按需挂载，保证每次打开都是干净的表单状态
@@ -216,17 +234,43 @@ const App = () => {
     </div>
   ) : null;
 
+  const resetFilters = () => {
+    setFilters({ place: "all", capacity: "all", facilities: [] });
+    setKeyword("");
+    setSelection(null);
+  };
+
+  const resetHomeFilters = () => {
+    resetFilters();
+    setBoardDate(new Date(BASE_DATE));
+  };
+
   if (isPc) {
     return (
       <div className="pc-app">
         <window.PcToolbar
           dateLabel={dateLabel}
+          days={days}
+          selectedDate={selectedDate}
+          onSelectDate={(value) => {
+            setBoardDate(new Date(`${value}T00:00:00`));
+            setSelection(null);
+          }}
           onPrevDay={() => shiftDay(-1)}
           onNextDay={() => shiftDay(1)}
           onToday={() => {
             setBoardDate(new Date(BASE_DATE));
             setSelection(null);
           }}
+          keyword={keyword}
+          onKeyword={setKeyword}
+          filters={filters}
+          places={places}
+          onFilters={(next) => {
+            setFilters(next);
+            setSelection(null);
+          }}
+          onReset={resetFilters}
           showHost={showHost}
           onToggleHost={() => setShowHost(v => !v)}
           showLegend={showLegend}
@@ -243,6 +287,7 @@ const App = () => {
             selection={selection}
             setSelection={setSelection}
             showHost={showHost}
+            isToday={isToday}
             onCommit={handleCommitRange}
             onNotice={showToast}
           />
@@ -266,45 +311,50 @@ const App = () => {
   return (
     <div className="m-app">
       <div className="m-navbar">
-        {activeTab === "my" ? (
-          <button type="button" className="m-nav-back" onClick={() => setActiveTab("reserve")}>
-            <window.IconChevronLeft />
-          </button>
-        ) : (
-          <span className="m-nav-side" />
-        )}
+        <button
+          type="button"
+          className="m-nav-icon"
+          onClick={() => {
+            if (activeTab === "my") {
+              setActiveTab("reserve");
+              return;
+            }
+            showToast("返回上一页（智信内嵌）");
+          }}
+        >
+          <window.IconChevronLeft />
+        </button>
 
         <span className="m-nav-title">{activeTab === "reserve" ? "预定会议室" : "我的预定"}</span>
 
         {activeTab === "reserve" ? (
-          <button type="button" className="m-nav-link" onClick={() => setActiveTab("my")}>我的预定</button>
+          <button type="button" className="m-nav-icon" onClick={() => setShowMore(true)}>
+            <window.IconMore />
+          </button>
         ) : (
-          <span className="m-nav-side" />
+          <span className="m-nav-icon" />
         )}
       </div>
 
       {toast}
 
       {activeTab === "reserve" ? (
-        <div className="m-page">
-          <window.MobileDateBar
-            days={days}
-            selectedDate={selectedDate}
-            onSelectDate={(value) => {
-              const next = days.find(d => d.value === value);
-              if (!next) return;
-              setBoardDate(new Date(`${value}T00:00:00`));
-              setSelection(null);
-            }}
-            onOpenCalendar={() => showToast("打开日历选择更多日期")}
-          />
+        <div className="m-page" data-screen-label="预定会议室">
+          <div className="m-home-toolbar">
+            <window.MobileHomeSearch value={keyword} onChange={setKeyword} />
+            <window.MobileHomeFilterBar
+              dateText={dateChip}
+              filters={filters}
+              onOpen={setFilterSheet}
+              onReset={resetHomeFilters}
+            />
+          </div>
 
-          <window.MobileFilterBar filters={filters} onOpen={setFilterSheet} />
-
-          <window.MobileTimelineBoard
+          <window.MobileRoomList
             rooms={visibleRooms}
             selection={selection}
             setSelection={setSelection}
+            isToday={isToday}
             onTapEvent={(room, event) => setOccupancy({ room, event })}
             onOpenRoom={handleOpenRoomDetail}
             onNotice={showToast}
@@ -323,12 +373,25 @@ const App = () => {
           />
         </div>
       ) : (
-        <div className="m-page m-page-scroll">
+        <div className="m-page m-page-scroll" data-screen-label="我的预定">
           <window.MobileMyBookingsView bookings={myBookings} onReleaseBooking={askRelease} />
         </div>
       )}
 
-      {filterSheet && (
+      {filterSheet === "date" && (
+        <window.MobileDateSheet
+          days={days}
+          selectedDate={selectedDate}
+          onSelect={(value) => {
+            setBoardDate(new Date(`${value}T00:00:00`));
+            setSelection(null);
+            setFilterSheet(null);
+          }}
+          onClose={() => setFilterSheet(null)}
+        />
+      )}
+
+      {(filterSheet === "place" || filterSheet === "facilities") && (
         <window.MobileFilterSheet
           type={filterSheet}
           filters={filters}
@@ -339,6 +402,16 @@ const App = () => {
             setSelection(null);
           }}
           onClose={() => setFilterSheet(null)}
+        />
+      )}
+
+      {showMore && (
+        <window.MobileMoreSheet
+          onOpenMine={() => {
+            setShowMore(false);
+            setActiveTab("my");
+          }}
+          onClose={() => setShowMore(false)}
         />
       )}
 

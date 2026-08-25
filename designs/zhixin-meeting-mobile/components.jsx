@@ -50,10 +50,6 @@ const MobileRoomDetailModal = ({ room, onClose, onBookNow }) => {
               <span className="form-cell-value">90天内</span>
             </div>
             <div className="form-cell">
-              <span className="form-cell-label">审批规则</span>
-              <span className="form-cell-value">{room.needApproval ? "需管理员审批" : "免审批直接预定"}</span>
-            </div>
-            <div className="form-cell">
               <span className="form-cell-label">周期预定</span>
               <span className="form-cell-value">{room.allowRecurring ? "支持" : "不支持"}</span>
             </div>
@@ -160,10 +156,6 @@ const MobileCreateScheduleModal = ({ room, rangeText, dateLabel, fullScreen, onC
               />
             </div>
           </div>
-
-          {room.needApproval && (
-            <div className="sheet-note">该会议室需管理员审批，提交后等待审批通过。</div>
-          )}
         </div>
 
         <div className="sheet-footer">
