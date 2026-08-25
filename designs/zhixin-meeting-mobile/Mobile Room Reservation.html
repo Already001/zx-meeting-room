@@ -9,8 +9,9 @@
   <meta name="apple-mobile-web-app-title" content="智信会议室移动端">
   <title>智信 · 智能会议室预定原型 (移动 / PC)</title>
   
-  <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="styles.css">
+  <!-- Design tokens first, then page styles (弹层 portal 不依赖 @import 继承) -->
+  <link rel="stylesheet" href="tokens/tokens.css?v=bookings-modal">
+  <link rel="stylesheet" href="styles.css?v=bookings-modal">
 
   <!-- React 18 + Babel Standalone (Pinned with integrity) -->
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
@@ -19,6 +20,7 @@
 </head>
 <body>
   <div id="root"></div>
+  <div id="overlay-root"></div>
 
   <!-- Component scripts in dependency order -->
   <script type="text/babel" src="icons.jsx"></script>

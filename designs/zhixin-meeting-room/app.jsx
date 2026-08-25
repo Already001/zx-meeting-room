@@ -1,27 +1,34 @@
 // Main Application Orchestrator
 
-const App = () => {
-  // State: rooms data
-  const [rooms, setRooms] = React.useState(() => {
-    const saved = localStorage.getItem("zx_meeting_rooms_proto");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return window.INITIAL_ROOMS;
-  });
+const ROOMS_KEY = "zx_meeting_rooms_proto_v2";
+const DICTS_KEY = "zx_meeting_dicts_proto";
 
-  // Persist rooms changes to localStorage
+const loadJson = (key, fallback) => {
+  const saved = localStorage.getItem(key);
+  if (!saved) return fallback;
+  try {
+    return JSON.parse(saved);
+  } catch (e) {
+    return fallback;
+  }
+};
+
+const App = () => {
+  const [rooms, setRooms] = React.useState(() => loadJson(ROOMS_KEY, window.INITIAL_ROOMS));
+  const [dicts, setDicts] = React.useState(() => loadJson(DICTS_KEY, window.INITIAL_DICTS));
+
   React.useEffect(() => {
-    localStorage.setItem("zx_meeting_rooms_proto", JSON.stringify(rooms));
+    localStorage.setItem(ROOMS_KEY, JSON.stringify(rooms));
   }, [rooms]);
 
-  // Routing State: view = 'list' | 'new' | 'edit'
+  React.useEffect(() => {
+    localStorage.setItem(DICTS_KEY, JSON.stringify(dicts));
+  }, [dicts]);
+
+  // Routing: list | new | edit | dicts
   const [currentView, setCurrentView] = React.useState("list");
   const [editingRoomId, setEditingRoomId] = React.useState(null);
 
-  // Toast Notification State
   const [toasts, setToasts] = React.useState([]);
   const showToast = (message, type = "success") => {
     const id = Date.now() + Math.random();
@@ -31,7 +38,6 @@ const App = () => {
     }, 3000);
   };
 
-  // Confirmation Modal State
   const [modalConfig, setModalConfig] = React.useState({
     isOpen: false,
     title: "提示",
@@ -46,7 +52,14 @@ const App = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Actions
+  const handleNavigate = (nav) => {
+    if (nav === "dicts") {
+      setCurrentView("dicts");
+      return;
+    }
+    setCurrentView("list");
+  };
+
   const handleNavigateNew = () => {
     setEditingRoomId(null);
     setCurrentView("new");
@@ -78,7 +91,6 @@ const App = () => {
 
   const handleSaveRoom = (payload, id) => {
     if (id) {
-      // Edit mode
       setRooms(prev => prev.map(r => {
         if (r.id === id) {
           return {
@@ -91,7 +103,6 @@ const App = () => {
       }));
       showToast("保存成功", "success");
     } else {
-      // New mode
       const newRoom = {
         ...payload,
         id: "room-" + Date.now(),
@@ -106,7 +117,6 @@ const App = () => {
 
   const handleToggleEnable = (room, targetEnable) => {
     if (targetEnable) {
-      // Direct enable with uniqueness check
       const duplicate = rooms.find(r => r.id !== room.id && r.enabled && r.name === room.name);
       if (duplicate) {
         showToast("已有同名启用中的会议室，请修改名称", "error");
@@ -115,7 +125,6 @@ const App = () => {
       setRooms(prev => prev.map(r => r.id === room.id ? { ...r, enabled: true, updatedAt: new Date().toISOString() } : r));
       showToast("已启用", "success");
     } else {
-      // Secondary confirmation for disable
       setModalConfig({
         isOpen: true,
         title: "提示",
@@ -132,14 +141,64 @@ const App = () => {
     }
   };
 
+  const handleSaveDict = (payload) => {
+    const old = payload.id ? dicts.find(d => d.id === payload.id) : null;
+    setDicts(prev => {
+      if (payload.id) {
+        return prev.map(d => d.id === payload.id ? { ...d, ...payload } : d);
+      }
+      return [...prev, { ...payload, id: "dict-" + Date.now(), enabled: true }];
+    });
+    if (old && old.name !== payload.name) {
+      setRooms(roomsPrev => roomsPrev.map(r => {
+        if (payload.type === "building" && r.buildingName === old.name) {
+          return { ...r, buildingName: payload.name };
+        }
+        if (payload.type === "facility") {
+          return {
+            ...r,
+            facilities: (r.facilities || []).map(f => f === old.name ? payload.name : f)
+          };
+        }
+        return r;
+      }));
+    }
+  };
+
+  const handleToggleDict = (item) => {
+    setDicts(prev => prev.map(d => d.id === item.id ? { ...d, enabled: !d.enabled } : d));
+    showToast(item.enabled ? "已停用，表单中不再展示" : "已启用", "success");
+  };
+
+  const handleDeleteDict = (item, used) => {
+    if (used > 0) {
+      showToast(`有 ${used} 间会议室正在使用「${item.name}」，无法删除`, "error");
+      return;
+    }
+    setModalConfig({
+      isOpen: true,
+      title: "提示",
+      message: `确定删除字典项「${item.name}」？`,
+      confirmText: "确定删除",
+      cancelText: "取消",
+      isDanger: true,
+      onConfirm: () => {
+        closeModal();
+        setDicts(prev => prev.filter(d => d.id !== item.id));
+        showToast("已删除", "success");
+      }
+    });
+  };
+
   const editingRoom = React.useMemo(() => {
     if (!editingRoomId) return null;
     return rooms.find(r => r.id === editingRoomId);
   }, [rooms, editingRoomId]);
 
+  const activeNav = currentView === "dicts" ? "dicts" : "rooms";
+
   return (
-    <window.AppShell activeNav="rooms">
-      {/* Toast notifications */}
+    <window.AppShell activeNav={activeNav} onNavigate={handleNavigate}>
       <div className="toast-container" aria-live="polite" aria-relevant="additions">
         {toasts.map(t => (
           <div key={t.id} className={`toast toast-${t.type}`} role="status">
@@ -149,7 +208,6 @@ const App = () => {
         ))}
       </div>
 
-      {/* Confirmation Modal */}
       <window.ConfirmModal
         isOpen={modalConfig.isOpen}
         title={modalConfig.title}
@@ -161,10 +219,10 @@ const App = () => {
         onCancel={closeModal}
       />
 
-      {/* Routed Content */}
       {currentView === "list" && (
         <window.RoomListPage
           rooms={rooms}
+          dicts={dicts}
           onNavigateNew={handleNavigateNew}
           onNavigateEdit={handleNavigateEdit}
           onToggleEnable={handleToggleEnable}
@@ -175,8 +233,20 @@ const App = () => {
         <window.RoomFormPage
           initialRoom={editingRoom}
           existingRooms={rooms}
+          dicts={dicts}
           onSave={handleSaveRoom}
           onCancel={handleCancelForm}
+          showToast={showToast}
+        />
+      )}
+
+      {currentView === "dicts" && (
+        <window.DictPage
+          dicts={dicts}
+          rooms={rooms}
+          onSave={handleSaveDict}
+          onDelete={handleDeleteDict}
+          onToggle={handleToggleDict}
           showToast={showToast}
         />
       )}
@@ -184,7 +254,6 @@ const App = () => {
   );
 };
 
-// Mount App
 const rootElement = document.getElementById("root");
 const root = ReactDOM.createRoot(rootElement);
 root.render(<App />);
