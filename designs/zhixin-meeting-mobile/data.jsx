@@ -13,15 +13,34 @@ window.fromMinutes = (min) => {
 
 const DAY_MIN = 1440;
 const SNAP_MIN = 30;
+const LIST_START = 7 * 60;
+const LIST_END = 23 * 60;
+const LIST_SPAN = LIST_END - LIST_START;
 
 window.TL = {
   DAY_MIN,
   SNAP: SNAP_MIN,
   HOURS: Array.from({ length: 24 }, (_, i) => i),
+  LIST_START,
+  LIST_END,
+  LIST_HOURS: Array.from({ length: 17 }, (_, i) => i + 7),
 
   clamp: (m) => Math.max(0, Math.min(DAY_MIN, m)),
   snap: (m) => window.TL.clamp(Math.round(m / SNAP_MIN) * SNAP_MIN),
   pct: (m) => `${(m / DAY_MIN) * 100}%`,
+
+  // 移动端首页卡片：7:00–23:00 迷你条
+  listPct: (m) => `${((Math.max(LIST_START, Math.min(LIST_END, m)) - LIST_START) / LIST_SPAN) * 100}%`,
+  listWidth: (start, end) => {
+    const s = Math.max(LIST_START, start);
+    const e = Math.min(LIST_END, end);
+    if (e <= s) return "0%";
+    return `${((e - s) / LIST_SPAN) * 100}%`;
+  },
+  minuteAtList: (rect, clientX) => {
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return window.TL.snap(LIST_START + ratio * LIST_SPAN);
+  },
 
   // 由指针位置换算成当天的分钟数
   minuteAt: (rect, clientX) => window.TL.snap(((clientX - rect.left) / rect.width) * DAY_MIN),
