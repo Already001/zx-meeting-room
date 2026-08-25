@@ -127,14 +127,47 @@ const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => 
 const ConfirmModal = ({ isOpen, title = "提示", message, onConfirm, onCancel, confirmText = "确定", cancelText = "取消", isDanger = false }) => {
   const titleId = "confirm-modal-title";
   const descId = "confirm-modal-desc";
+  const dialogRef = React.useRef(null);
+  const previousFocusRef = React.useRef(null);
 
   React.useEffect(() => {
     if (!isOpen) return undefined;
+    previousFocusRef.current = document.activeElement;
+    const dialog = dialogRef.current;
+    const getFocusable = () => Array.from(
+      dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    ).filter((node) => !node.disabled);
+
     const onKeyDown = (event) => {
-      if (event.key === "Escape") onCancel();
+      if (event.key === "Escape") {
+        onCancel();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = getFocusable();
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    requestAnimationFrame(() => {
+      const focusable = getFocusable();
+      if (focusable.length) focusable[0].focus();
+    });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (previousFocusRef.current && previousFocusRef.current.focus) {
+        previousFocusRef.current.focus();
+      }
+    };
   }, [isOpen, onCancel]);
 
   if (!isOpen) return null;
@@ -142,6 +175,7 @@ const ConfirmModal = ({ isOpen, title = "提示", message, onConfirm, onCancel, 
     <div className="modal-overlay" onClick={onCancel}>
       <div
         className="modal-card"
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

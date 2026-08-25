@@ -228,7 +228,7 @@ const App = () => {
   );
 
   const toast = toastMsg ? (
-    <div className="mobile-toast">
+    <div className="mobile-toast" role="status" aria-live="polite">
       <window.IconCheck />
       <span>{toastMsg}</span>
     </div>
@@ -314,6 +314,7 @@ const App = () => {
         <button
           type="button"
           className="m-nav-icon"
+          aria-label={activeTab === "my" ? "返回预定会议室" : "返回"}
           onClick={() => {
             if (activeTab === "my") {
               setActiveTab("reserve");
@@ -328,7 +329,7 @@ const App = () => {
         <span className="m-nav-title">{activeTab === "reserve" ? "预定会议室" : "我的预定"}</span>
 
         {activeTab === "reserve" ? (
-          <button type="button" className="m-nav-icon" onClick={() => setShowMore(true)}>
+          <button type="button" className="m-nav-icon" aria-label="更多" aria-haspopup="dialog" onClick={() => setShowMore(true)}>
             <window.IconMore />
           </button>
         ) : (

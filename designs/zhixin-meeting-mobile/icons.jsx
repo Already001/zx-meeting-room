@@ -34,7 +34,7 @@ const IconUser = () => (
 );
 
 const IconCheck = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52c41a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
@@ -132,10 +132,10 @@ const IconMore = () => (
 );
 
 const IconRoomTile = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-    <rect x="3.5" y="4" width="17" height="12" rx="2" stroke="#5B8CFF" strokeWidth="1.6" />
-    <path d="M8 20h8M12 16v4" stroke="#5B8CFF" strokeWidth="1.6" strokeLinecap="round" />
-    <path d="M7.5 13.2l3.2-3.4 2.6 2.1 3.7-4.4" stroke="#5B8CFF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="3.5" y="4" width="17" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M8 20h8M12 16v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M7.5 13.2l3.2-3.4 2.6 2.1 3.7-4.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -153,7 +153,18 @@ const IconCast = () => (
   </svg>
 );
 
+const useOverlayClose = (onClose) => {
+  React.useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+};
+
 Object.assign(window, {
+  useOverlayClose,
   IconChevronLeft,
   IconChevronRight,
   IconCalendar,

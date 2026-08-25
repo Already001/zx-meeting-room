@@ -56,6 +56,7 @@
   /* Elevation */
   --shadow-light: 0 0 4px 0 rgba(0, 0, 0, 0.1);
   --shadow-heavy: 0 0 10px rgba(0, 0, 0, 0.3);
+  --shadow-split: 0 -1px 0 0 #F4F6F8;
 
   /* Layout */
   --topbar-height: 48px;
@@ -63,4 +64,5 @@
   --menu-active-bar: 4px;
   --container-max: 1200px;
   --control-height: 32px;
+  --scrim: rgba(0, 0, 0, 0.45);
 }

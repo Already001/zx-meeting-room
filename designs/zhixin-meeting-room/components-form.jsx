@@ -1,6 +1,6 @@
 // Room Form Page Component (New / Edit)
 
-const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast }) => {
+const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel }) => {
   const isEdit = Boolean(initialRoom && initialRoom.id);
 
   // Form State
@@ -50,6 +50,14 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
   // Errors state
   const [errors, setErrors] = React.useState({});
   const [isSaving, setIsSaving] = React.useState(false);
+  const errorSummaryRef = React.useRef(null);
+  const fieldAnchors = {
+    name: { id: "room-name", label: "会议室名称" },
+    buildingName: { id: "room-building", label: "建筑" },
+    floorName: { id: "room-floor", label: "楼层" },
+    capacity: { id: "room-capacity", label: "容纳人数" },
+    openHours: { id: "room-open-start", label: "开放时间" }
+  };
 
   // Derive existing buildings from rooms for dropdown suggestions
   const existingBuildings = React.useMemo(() => {
@@ -204,8 +212,11 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
     if (isSaving) return;
 
     if (!validate()) {
-      showToast("请检查表单必填项", "error");
       requestAnimationFrame(() => {
+        if (errorSummaryRef.current) {
+          errorSummaryRef.current.focus();
+          return;
+        }
         const firstInvalid = document.querySelector("form .input.error, form select.error");
         if (firstInvalid) firstInvalid.focus();
       });
@@ -254,7 +265,27 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {Object.keys(errors).length > 0 && (
+          <div
+            className="form-error-summary"
+            role="alert"
+            tabIndex={-1}
+            ref={errorSummaryRef}
+            aria-labelledby="form-error-title"
+          >
+            <h2 id="form-error-title">请检查以下问题</h2>
+            <ul>
+              {Object.entries(errors).map(([key, message]) => (
+                <li key={key}>
+                  <a href={`#${fieldAnchors[key] ? fieldAnchors[key].id : ""}`}>
+                    {fieldAnchors[key] ? `${fieldAnchors[key].label}：${message}` : message}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {/* Section 1: 基本信息 */}
         <div className="card-content">
           <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
@@ -307,7 +338,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
             {/* 建筑与楼层 */}
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>所在位置
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>所在位置
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
@@ -531,7 +562,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
             {/* 初始状态 */}
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16, paddingTop: 4 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)" }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>状态
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>状态
               </label>
               <div style={{ display: "flex", gap: 24 }}>
                 <label className="radio-label">
