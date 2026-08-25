@@ -2,134 +2,56 @@
 
 const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => {
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden" }}>
+    <div className="app-shell">
       <a className="sr-only" href="#main-content">跳到主内容</a>
-      {/* 60px Left Sidenav */}
-      <aside style={{
-        width: "var(--sidenav-width)",
-        backgroundColor: "var(--color-canvas-soft)",
-        borderRight: "1px solid var(--color-hairline)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "12px 0",
-        flexShrink: 0
-      }}>
-        {/* App Icon */}
-        <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          backgroundColor: "var(--color-primary)",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 20
-        }}>
+      <aside className="app-sidenav">
+        <div className="app-sidenav-logo" aria-hidden="true">
           <window.IconAppLogo />
         </div>
 
-        <nav aria-label="主导航" style={{ width: "100%" }}>
+        <nav className="app-sidenav-nav" aria-label="主导航">
           <button
             type="button"
+            className={`app-sidenav-item${activeNav === "rooms" ? " is-active" : ""}`}
             aria-current={activeNav === "rooms" ? "page" : undefined}
-            style={{
-              width: "100%",
-              height: 44,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 2,
-              position: "relative",
-              backgroundColor: activeNav === "rooms" ? "var(--color-primary-bg)" : "transparent",
-              color: activeNav === "rooms" ? "var(--color-primary)" : "var(--color-body)",
-              cursor: "pointer",
-              border: "none",
-              padding: 0
-            }}
           >
-          {activeNav === "rooms" && (
-            <div style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: "var(--menu-active-bar)",
-              backgroundColor: "var(--color-primary)"
-            }} />
-          )}
-          <window.IconMeetingRoom />
-          <span style={{ fontSize: 10, lineHeight: "16px" }}>会议室</span>
+            {activeNav === "rooms" && <span className="app-sidenav-indicator" />}
+            <window.IconMeetingRoom />
+            <span className="app-sidenav-label">会议室</span>
           </button>
         </nav>
       </aside>
 
-      {/* Main Area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* 48px Topbar */}
-        <header style={{
-          height: "var(--topbar-height)",
-          backgroundColor: "var(--color-canvas)",
-          borderBottom: "1px solid var(--color-hairline)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 var(--spacing-2xl)",
-          flexShrink: 0
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontWeight: 600, fontSize: 16, lineHeight: "24px", color: "var(--color-ink)" }}>智信 · 智能会议室管理平台</span>
-            <span style={{ fontSize: 12, color: "var(--color-mute)", backgroundColor: "var(--color-canvas-soft)", padding: "2px 6px", borderRadius: 4 }}>
-              PC WebView (zx) / 浏览器 (main)
-            </span>
+      <div className="app-main">
+        <header className="app-topbar">
+          <div className="app-topbar-left">
+            <span className="type-title-sm">智信 · 智能会议室管理平台</span>
+            <span className="app-env-tag">PC WebView (zx) / 浏览器 (main)</span>
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ fontSize: 13, color: "var(--color-body)" }}>
-              企业：<span style={{ color: "var(--color-ink)", fontWeight: 500 }}>创新科技集团 (corpId: zx-001)</span>
+          <div className="app-topbar-right">
+            <div className="app-corp">
+              企业：<strong>创新科技集团 (corpId: zx-001)</strong>
             </div>
-            <div style={{
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              backgroundColor: "var(--color-primary-bg)",
-              color: "var(--color-primary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-              fontWeight: 600
-            }}>
-              管
-            </div>
+            <div className="app-avatar" title={userName}>管</div>
           </div>
         </header>
 
-        {/* Content Viewport */}
-        <main id="main-content" style={{
-          flex: 1,
-          overflowY: "auto",
-          backgroundColor: "var(--color-canvas-soft)",
-          padding: "var(--spacing-2xl)"
-        }}>
-          <div style={{ maxWidth: "var(--container-max)", margin: "0 auto" }}>
-            {children}
-          </div>
+        <main id="main-content" className="app-content">
+          <div className="app-content-inner">{children}</div>
         </main>
       </div>
     </div>
   );
 };
 
-// Modal Confirmation Dialog
 const ConfirmModal = ({ isOpen, title = "提示", message, onConfirm, onCancel, confirmText = "确定", cancelText = "取消", isDanger = false }) => {
   const titleId = "confirm-modal-title";
   const descId = "confirm-modal-desc";
+  const confirmRef = React.useRef(null);
 
   React.useEffect(() => {
     if (!isOpen) return undefined;
+    confirmRef.current?.focus();
     const onKeyDown = (event) => {
       if (event.key === "Escape") onCancel();
     };
@@ -148,16 +70,21 @@ const ConfirmModal = ({ isOpen, title = "提示", message, onConfirm, onCancel, 
         aria-describedby={descId}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-divider)", display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="modal-head">
           <window.IconAlert />
-          <span id={titleId} style={{ fontWeight: 600, fontSize: 16, lineHeight: "24px" }}>{title}</span>
+          <span id={titleId} className="type-title-sm">{title}</span>
         </div>
-        <div id={descId} style={{ padding: "20px", fontSize: 14, color: "var(--color-body)", lineHeight: "20px" }}>
-          {message}
-        </div>
-        <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-divider)", display: "flex", justifyContent: "flex-end", gap: 8, backgroundColor: "var(--color-canvas-soft)" }}>
+        <div id={descId} className="modal-body">{message}</div>
+        <div className="modal-foot">
           <button type="button" className="btn btn-secondary" onClick={onCancel}>{cancelText}</button>
-          <button type="button" className={`btn ${isDanger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>{confirmText}</button>
+          <button
+            ref={confirmRef}
+            type="button"
+            className={`btn ${isDanger ? "btn-danger" : "btn-primary"}`}
+            onClick={onConfirm}
+          >
+            {confirmText}
+          </button>
         </div>
       </div>
     </div>

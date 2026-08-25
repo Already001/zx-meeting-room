@@ -34,7 +34,7 @@ const IconUser = () => (
 );
 
 const IconCheck = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52c41a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
@@ -133,9 +133,9 @@ const IconMore = () => (
 
 const IconRoomTile = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-    <rect x="3.5" y="4" width="17" height="12" rx="2" stroke="#5B8CFF" strokeWidth="1.6" />
-    <path d="M8 20h8M12 16v4" stroke="#5B8CFF" strokeWidth="1.6" strokeLinecap="round" />
-    <path d="M7.5 13.2l3.2-3.4 2.6 2.1 3.7-4.4" stroke="#5B8CFF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <rect x="3.5" y="4" width="17" height="12" rx="2" stroke="var(--color-primary)" strokeWidth="1.6" />
+    <path d="M8 20h8M12 16v4" stroke="var(--color-primary)" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M7.5 13.2l3.2-3.4 2.6 2.1 3.7-4.4" stroke="var(--color-primary)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 

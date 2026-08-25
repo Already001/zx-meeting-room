@@ -43,7 +43,7 @@ const useIsPc = () => {
 const App = () => {
   const isPc = useIsPc();
 
-  const [activeTab, setActiveTab] = React.useState("reserve");
+  const [showMine, setShowMine] = React.useState(false);
   const [boardDate, setBoardDate] = React.useState(() => new Date(BASE_DATE));
   const [rooms, setRooms] = React.useState(() => window.MOBILE_ROOMS);
   const [myBookings, setMyBookings] = React.useState(() => window.INITIAL_MY_BOOKINGS);
@@ -122,7 +122,9 @@ const App = () => {
   };
 
   const handleCommitRange = (room, picked) => {
-    openBooking(room, `${window.fromMinutes(picked.start)} - ${window.fromMinutes(picked.end)}`);
+    const range = `${window.fromMinutes(picked.start)} - ${window.fromMinutes(picked.end)}`;
+    setSelection(null);
+    openBooking(room, range);
   };
 
   const handleQuickDuration = (minutes) => {
@@ -159,7 +161,7 @@ const App = () => {
     setDetailRoom(null);
     setSelection(null);
     showToast("预定成功，已加入「我的预定」");
-    setActiveTab("my");
+    setShowMine(true);
   };
 
   const releaseBooking = (booking) => {
@@ -218,6 +220,13 @@ const App = () => {
           onSubmitSuccess={handleBookingSuccess}
         />
       )}
+      {showMine && (
+        <window.MobileMyBookingsModal
+          bookings={myBookings}
+          onReleaseBooking={askRelease}
+          onClose={() => setShowMine(false)}
+        />
+      )}
       {confirmPayload && (
         <window.MobileConfirmSheet
           payload={confirmPayload}
@@ -227,12 +236,15 @@ const App = () => {
     </React.Fragment>
   );
 
-  const toast = toastMsg ? (
-    <div className="mobile-toast">
-      <window.IconCheck />
-      <span>{toastMsg}</span>
-    </div>
-  ) : null;
+  const toast = toastMsg
+    ? ReactDOM.createPortal(
+        <div className="mobile-toast">
+          <window.IconCheck />
+          <span>{toastMsg}</span>
+        </div>,
+        document.body
+      )
+    : null;
 
   const resetFilters = () => {
     setFilters({ place: "all", capacity: "all", facilities: [] });
@@ -275,33 +287,23 @@ const App = () => {
           onToggleHost={() => setShowHost(v => !v)}
           showLegend={showLegend}
           onToggleLegend={() => setShowLegend(v => !v)}
-          onOpenMine={() => setActiveTab(activeTab === "my" ? "reserve" : "my")}
+          onOpenMine={() => setShowMine((v) => !v)}
+          mineOpen={showMine}
           onNotice={showToast}
         />
 
         {toast}
 
-        {activeTab === "reserve" ? (
-          <window.PcTimelineBoard
-            rooms={visibleRooms}
-            selection={selection}
-            setSelection={setSelection}
-            showHost={showHost}
-            isToday={isToday}
-            onCommit={handleCommitRange}
-            onNotice={showToast}
-          />
-        ) : (
-          <div className="pc-bookings-page">
-            <div className="pc-page-head">
-              <h2>我的预定</h2>
-              <button type="button" className="pc-text-btn" onClick={() => setActiveTab("reserve")}>
-                返回预定看板
-              </button>
-            </div>
-            <window.MobileMyBookingsView bookings={myBookings} onReleaseBooking={askRelease} />
-          </div>
-        )}
+        <window.PcTimelineBoard
+          rooms={visibleRooms}
+          selection={selection}
+          setSelection={setSelection}
+          showHost={showHost}
+          isToday={isToday}
+          bookingOpen={Boolean(bookingTargetRoom)}
+          onCommit={handleCommitRange}
+          onNotice={showToast}
+        />
 
         {sharedModals}
       </div>
@@ -314,32 +316,21 @@ const App = () => {
         <button
           type="button"
           className="m-nav-icon"
-          onClick={() => {
-            if (activeTab === "my") {
-              setActiveTab("reserve");
-              return;
-            }
-            showToast("返回上一页（智信内嵌）");
-          }}
+          onClick={() => showToast("返回上一页（智信内嵌）")}
         >
           <window.IconChevronLeft />
         </button>
 
-        <span className="m-nav-title">{activeTab === "reserve" ? "预定会议室" : "我的预定"}</span>
+        <span className="m-nav-title">预定会议室</span>
 
-        {activeTab === "reserve" ? (
-          <button type="button" className="m-nav-icon" onClick={() => setShowMore(true)}>
-            <window.IconMore />
-          </button>
-        ) : (
-          <span className="m-nav-icon" />
-        )}
+        <button type="button" className="m-nav-icon" onClick={() => setShowMore(true)}>
+          <window.IconMore />
+        </button>
       </div>
 
       {toast}
 
-      {activeTab === "reserve" ? (
-        <div className="m-page" data-screen-label="预定会议室">
+      <div className="m-page" data-screen-label="预定会议室">
           <div className="m-home-toolbar">
             <window.MobileHomeSearch value={keyword} onChange={setKeyword} />
             <window.MobileHomeFilterBar
@@ -372,11 +363,6 @@ const App = () => {
             }}
           />
         </div>
-      ) : (
-        <div className="m-page m-page-scroll" data-screen-label="我的预定">
-          <window.MobileMyBookingsView bookings={myBookings} onReleaseBooking={askRelease} />
-        </div>
-      )}
 
       {filterSheet === "date" && (
         <window.MobileDateSheet
@@ -409,7 +395,7 @@ const App = () => {
         <window.MobileMoreSheet
           onOpenMine={() => {
             setShowMore(false);
-            setActiveTab("my");
+            setShowMine(true);
           }}
           onClose={() => setShowMore(false)}
         />

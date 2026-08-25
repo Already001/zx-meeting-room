@@ -16,6 +16,17 @@ const useNowMinutes = () => {
   return now;
 };
 
+// 轴上「当前时间 / 选中时段」会盖住邻近整点，整点标签直接不画
+const axisHourHidden = (hourMin, nowMin, isToday, selection) => {
+  const near = (a, b, windowMin) => Math.abs(a - b) < windowMin;
+  if (isToday && near(hourMin, nowMin, 40)) return true;
+  if (!selection) return false;
+  if (near(hourMin, selection.start, 40)) return true;
+  if (near(hourMin, selection.end, 40)) return true;
+  const mid = (selection.start + selection.end) / 2;
+  return near(hourMin, mid, 48);
+};
+
 // 顶部双层工具栏
 const PcToolbar = ({
   dateLabel,
@@ -36,6 +47,7 @@ const PcToolbar = ({
   showLegend,
   onToggleLegend,
   onOpenMine,
+  mineOpen,
   onNotice
 }) => {
   const [openMenu, setOpenMenu] = React.useState(null);
@@ -60,12 +72,69 @@ const PcToolbar = ({
   };
 
   return (
-  <div className="pc-toolbar">
-    <div className="pc-toolbar-row">
-      <button type="button" className="pc-select" onClick={() => onNotice("切换企业 / 组织")}>
-        <span>Nic测试</span>
-        <window.IconCaretDown />
-      </button>
+  <div className="pc-chrome">
+    <header className="pc-topbar">
+      <div className="pc-topbar-left">
+        <span className="pc-brand-mark" aria-hidden="true">会</span>
+        <h1 className="pc-brand-title">预定会议室</h1>
+        <button type="button" className="pc-org" onClick={() => onNotice("切换企业 / 组织")}>
+          <span>Nic测试</span>
+          <window.IconCaretDown />
+        </button>
+      </div>
+      <div className="pc-topbar-right">
+        <button type="button" className="pc-text-btn" onClick={() => onNotice("跳转会议室管理端")}>
+          会议室管理
+        </button>
+        <button type="button" className={`pc-ghost-btn${mineOpen ? " is-open" : ""}`} onClick={onOpenMine}>我的预定</button>
+      </div>
+    </header>
+
+    <div className="pc-filterbar">
+      <div className="pc-date-nav">
+        <button type="button" className="pc-icon-btn" title="前一天" onClick={onPrevDay}>
+          <window.IconArrowLeft />
+        </button>
+        <div className="pc-dropdown" onPointerDown={(e) => e.stopPropagation()}>
+          <button type="button" className="pc-select pc-date-select" onClick={() => toggleMenu("date")}>
+            <span>{dateLabel}</span>
+            <window.IconCalendarSmall />
+          </button>
+          {openMenu === "date" && (
+            <div className="pc-menu pc-menu-date">
+              {days.map(d => (
+                <button
+                  type="button"
+                  key={d.value}
+                  className={`pc-menu-item ${selectedDate === d.value ? "active" : ""}`}
+                  onClick={() => {
+                    onSelectDate(d.value);
+                    setOpenMenu(null);
+                  }}
+                >
+                  {d.chip}{d.week === "今天" ? "（今天）" : d.week === "明天" ? "（明天）" : ""}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button type="button" className="pc-icon-btn" title="后一天" onClick={onNextDay}>
+          <window.IconArrowRight />
+        </button>
+        <button type="button" className="pc-text-btn pc-today-btn" onClick={onToday}>今天</button>
+      </div>
+
+      <div className="pc-filterbar-split" />
+
+      <div className="pc-search">
+        <window.IconSearch />
+        <input
+          type="text"
+          placeholder="搜索会议室"
+          value={keyword}
+          onChange={(e) => onKeyword(e.target.value)}
+        />
+      </div>
 
       <div className="pc-dropdown" onPointerDown={(e) => e.stopPropagation()}>
         <button
@@ -105,16 +174,6 @@ const PcToolbar = ({
         )}
       </div>
 
-      <div className="pc-search">
-        <window.IconSearch />
-        <input
-          type="text"
-          placeholder="搜索会议室"
-          value={keyword}
-          onChange={(e) => onKeyword(e.target.value)}
-        />
-      </div>
-
       <div className="pc-dropdown" onPointerDown={(e) => e.stopPropagation()}>
         <button
           type="button"
@@ -142,59 +201,18 @@ const PcToolbar = ({
       </div>
 
       <button type="button" className="pc-text-btn" onClick={onReset}>重置</button>
-      <button type="button" className="pc-icon-btn" title="刷新" onClick={() => onNotice("已刷新会议室占用")}>
-        <window.IconRefresh />
-      </button>
-      <button type="button" className="pc-text-btn pc-toolbar-end" onClick={onOpenMine}>我的预定</button>
-    </div>
-
-    <div className="pc-toolbar-row pc-toolbar-row-sub">
-      <div className="pc-dropdown" onPointerDown={(e) => e.stopPropagation()}>
-        <button type="button" className="pc-select pc-date-select" onClick={() => toggleMenu("date")}>
-          <span>{dateLabel}</span>
-          <window.IconCalendarSmall />
-        </button>
-        {openMenu === "date" && (
-          <div className="pc-menu pc-menu-date">
-            {days.map(d => (
-              <button
-                type="button"
-                key={d.value}
-                className={`pc-menu-item ${selectedDate === d.value ? "active" : ""}`}
-                onClick={() => {
-                  onSelectDate(d.value);
-                  setOpenMenu(null);
-                }}
-              >
-                {d.chip}{d.week === "今天" ? "（今天）" : d.week === "明天" ? "（明天）" : ""}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      <button type="button" className="pc-icon-btn" title="前一天" onClick={onPrevDay}>
-        <window.IconArrowLeft />
-      </button>
-      <button type="button" className="pc-text-btn pc-today-btn" onClick={onToday}>回到今天</button>
-      <button type="button" className="pc-icon-btn" title="后一天" onClick={onNextDay}>
-        <window.IconArrowRight />
-      </button>
-      <button type="button" className="pc-select pc-select-narrow" disabled>
-        <span>日</span>
-      </button>
 
       <div className="pc-toolbar-end pc-toolbar-tools">
         <button type="button" className={`pc-tool-link ${showLegend ? "active" : ""}`} onClick={onToggleLegend}>
           <window.IconInfo />
-          <span>颜色示意</span>
+          <span>图例</span>
         </button>
         <button type="button" className={`pc-tool-link ${showHost ? "active" : ""}`} onClick={onToggleHost}>
           <window.IconEye />
           <span>显示预定人</span>
         </button>
-        <button type="button" className="pc-tool-link" onClick={() => onNotice("跳转会议室管理端")}>
-          <window.IconSettings />
-          <span>会议室管理</span>
+        <button type="button" className="pc-icon-btn" title="刷新" onClick={() => onNotice("已刷新会议室占用")}>
+          <window.IconRefresh />
         </button>
       </div>
     </div>
@@ -205,7 +223,7 @@ const PcToolbar = ({
         <span className="pc-legend-item"><i className="pc-legend-dot busy" />他人已预定</span>
         <span className="pc-legend-item"><i className="pc-legend-dot mine" />我的预定</span>
         <span className="pc-legend-item"><i className="pc-legend-dot picking" />当前选择</span>
-        <span className="pc-legend-hint">空闲区域拖选时段；红色为当前时间，此刻之前不可预定</span>
+        <span className="pc-legend-hint">在空闲区域拖选时段；红色为当前时间，此刻之前不可预定</span>
       </div>
     )}
   </div>
@@ -213,11 +231,11 @@ const PcToolbar = ({
 };
 
 // 单个会议室行
-const PcRoomRow = ({ room, selection, showHost, isToday, nowMin, onPointerDown, onShowTip, onHideTip, onConfirm, onCancel }) => {
+const PcRoomRow = ({ room, selection, showHost, isToday, nowMin, onPointerDown, onShowTip, onHideTip }) => {
   const isPicking = selection && selection.roomId === room.id;
 
   return (
-    <div className="tl-row">
+    <div className={`tl-row${isPicking ? " is-picking" : ""}`}>
       <div className="tl-room-cell">
         <div className="tl-room-name">
           <span>{room.name}</span>
@@ -263,36 +281,80 @@ const PcRoomRow = ({ room, selection, showHost, isToday, nowMin, onPointerDown, 
             </span>
           </div>
         )}
-
-        {isPicking && selection.confirmed && (
-          <div
-            className="tl-confirm-pop"
-            style={{ left: window.TL.pct((selection.start + selection.end) / 2) }}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <div className="tl-confirm-time">
-              {window.fromMinutes(selection.start)}-{window.fromMinutes(selection.end)} {window.TL.duration(selection.start, selection.end)}
-            </div>
-            <div className="tl-confirm-actions">
-              <button type="button" className="tl-btn-ghost" onClick={onCancel}>取消</button>
-              <button type="button" className="tl-btn-primary" onClick={() => onConfirm(room, selection)}>确定</button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
+const TlConfirmPop = ({ selection, room, onConfirm, onCancel }) => {
+  const overlayRoot = document.getElementById("overlay-root") || document.body;
+  const confirmRef = React.useRef(null);
+
+  React.useEffect(() => {
+    confirmRef.current?.focus();
+    const onKey = (e) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  if (!room) return null;
+
+  return ReactDOM.createPortal(
+    <div
+      className="tl-confirm-overlay"
+      onClick={onCancel}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <div
+        className="tl-confirm-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tl-confirm-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="tl-confirm-head">
+          <span id="tl-confirm-title" className="type-title-sm">确认预定</span>
+        </div>
+        <div className="tl-confirm-body">
+          <div className="tl-confirm-kv">
+            <span>会议室</span>
+            <strong>{room.name}</strong>
+          </div>
+          <div className="tl-confirm-kv">
+            <span>时段</span>
+            <strong>
+              {window.fromMinutes(selection.start)}-{window.fromMinutes(selection.end)} · {window.TL.duration(selection.start, selection.end)}
+            </strong>
+          </div>
+        </div>
+        <div className="tl-confirm-actions">
+          <button type="button" className="tl-btn-ghost" onClick={onCancel}>取消</button>
+          <button
+            ref={confirmRef}
+            type="button"
+            className="tl-btn-primary"
+            onClick={() => onConfirm(room, selection)}
+          >
+            确定
+          </button>
+        </div>
+      </div>
+    </div>,
+    overlayRoot
+  );
+};
+
 // 看板主体
-const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, onCommit, onNotice }) => {
+const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, bookingOpen, onCommit, onNotice }) => {
   const nowMin = useNowMinutes();
   const dragRef = React.useRef(null);
   const [tip, setTip] = React.useState(null);
 
   const handlePointerDown = (room, e) => {
     if (e.button !== 0) return;
-    if (e.target.closest(".tl-event") || e.target.closest(".tl-confirm-pop")) return;
+    if (e.target.closest(".tl-event") || e.target.closest(".tl-confirm-card")) return;
 
     const track = e.currentTarget;
     const rect = track.getBoundingClientRect();
@@ -359,13 +421,15 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, on
           <div className="tl-room-cell tl-head-cell">会议室</div>
           <div className="tl-track tl-axis">
             {window.TL.HOURS.map(h => (
-              <span
-                key={h}
-                className={`tl-axis-label ${h === 0 ? "tl-axis-label-first" : ""}`}
-                style={{ left: window.TL.pct(h * 60) }}
-              >
-                {String(h).padStart(2, "0")}:00
-              </span>
+              axisHourHidden(h * 60, nowMin, isToday, selection) ? null : (
+                <span
+                  key={h}
+                  className={`tl-axis-label ${h === 0 ? "tl-axis-label-first" : ""}`}
+                  style={{ left: window.TL.pct(h * 60) }}
+                >
+                  {String(h).padStart(2, "0")}:00
+                </span>
+              )
             ))}
             {isToday && (
               <span className="tl-axis-now" style={{ left: window.TL.pct(nowMin) }}>
@@ -373,19 +437,18 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, on
               </span>
             )}
             {selection && (
-              <React.Fragment>
-                <span className="tl-axis-pick" style={{ left: window.TL.pct(selection.start) }}>
-                  {window.fromMinutes(selection.start)}
-                </span>
-                <span className="tl-axis-pick" style={{ left: window.TL.pct(selection.end) }}>
-                  {window.fromMinutes(selection.end)}
-                </span>
-              </React.Fragment>
+              <span
+                className="tl-axis-pick"
+                style={{ left: window.TL.pct((selection.start + selection.end) / 2) }}
+              >
+                {window.fromMinutes(selection.start)}-{window.fromMinutes(selection.end)}
+              </span>
             )}
           </div>
         </div>
 
         <div className="tl-body">
+          {!(selection && selection.confirmed) && (
           <div className="tl-guides">
             <div className="tl-room-cell tl-guides-spacer" />
             <div className="tl-track">
@@ -398,9 +461,13 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, on
               )}
             </div>
           </div>
+          )}
 
           {rooms.length === 0 ? (
-            <div className="pc-empty">没有符合筛选条件的会议室</div>
+            <div className="pc-empty">
+              <span className="pc-empty-title">没有符合筛选条件的会议室</span>
+              <span className="pc-empty-caption">试试调整建筑、楼层或设施条件</span>
+            </div>
           ) : (
             rooms.map(room => (
               <PcRoomRow
@@ -413,15 +480,13 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, on
                 onPointerDown={handlePointerDown}
                 onShowTip={showTip}
                 onHideTip={() => setTip(null)}
-                onConfirm={onCommit}
-                onCancel={() => setSelection(null)}
               />
             ))
           )}
         </div>
       </div>
 
-      {tip && (
+      {tip && ReactDOM.createPortal(
         <div className="tl-tooltip" style={{ left: tip.left, top: tip.top }}>
           {tip.event.start}-{tip.event.end}
           {tip.event.mine ? (
@@ -429,7 +494,16 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, on
           ) : (
             <React.Fragment> 已被 <b>{tip.event.host}</b> 预定</React.Fragment>
           )}
-        </div>
+        </div>,
+        document.body
+      )}
+      {selection?.confirmed && !bookingOpen && (
+        <TlConfirmPop
+          selection={selection}
+          room={rooms.find((r) => r.id === selection.roomId)}
+          onConfirm={onCommit}
+          onCancel={() => setSelection(null)}
+        />
       )}
     </div>
   );

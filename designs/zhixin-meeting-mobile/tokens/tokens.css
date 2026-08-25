@@ -1,36 +1,86 @@
-:root {
-  /* Colors */
-  --color-primary: #3E7EFF;
-  --color-primary-pressed: #2E6BE6;
-  --color-primary-light: #EBF2FF;
-  --color-primary-border: #D8E5FF;
-  
-  --color-ding-primary: #007FFF;
-  --color-ding-green: #00B96B;
-  --color-ding-busy: #F56C6C;
-  --color-ding-free: #36D18E;
-  --color-ding-yellow: #FA8C16;
-  
-  --color-ink: #1F2329;
-  --color-sub: #5D616B;
-  --color-mute: #8F959E;
-  --color-hairline: #EBEDF0;
-  --color-border: #DCDEE0;
-  --color-bg-page: #F7F8FA;
-  --color-bg-card: #FFFFFF;
-  
-  /* Timeline Grid colors */
-  --timeline-busy: #FF4D4F;
-  --timeline-busy-light: #FFF1F0;
-  --timeline-busy-border: #FFA39E;
-  --timeline-free: #F4F6F8;
-  --timeline-selected: #3E7EFF;
-  --timeline-selected-light: #EBF2FF;
-  
-  /* Fonts */
-  --font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
-  
-  /* Phone Frame Dimension for Desktop Preview */
+:root,
+html,
+#overlay-root {
+  /* Colors — DESIGN.md（与 PC 管理原型同一套，禁止钉钉蓝 / 债务色） */
+  --color-primary: #3e7eff;
+  --color-primary-pressed: #2e6be6;
+  --color-primary-border: #d8e5ff;
+  --color-primary-bg: #ebf2ff;
+  --color-primary-light: #ebf2ff;
+  --color-on-primary: #ffffff;
+
+  --color-ink: #1f2329;
+  --color-body: #5d616b;
+  --color-mute: #8f959e;
+  --color-disabled: #c9cfd8;
+  --color-control: #c9cfd8;
+  --color-control-active: #e0e4e8;
+  --color-hairline: #e1e5eb;
+  --color-divider: #e7e7e7;
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #f4f6f8;
+
+  --color-success: #36d18e;
+  --color-success-bg: #eafaf3;
+  --color-warning: #feac00;
+  --color-warning-bg: #fef6e5;
+  --color-danger: #fa4141;
+  --color-danger-pressed: #dd3636;
+  --color-overdue: #ff950a;
+
+  --color-biz-ts: #63e4d7;
+  --color-biz-ts-bg: #effcfb;
+  --color-biz-t0: #b080ff;
+  --color-biz-t0-bg: #f7f2ff;
+  --color-biz-external: #45c5f7;
+  --color-biz-search-hit: #fdf3aa;
+
+  /* 时间轴占用：别人=警告浅底，我的=主色浅底，选中=主色 */
+  --timeline-busy: var(--color-warning-bg);
+  --timeline-busy-text: var(--color-overdue);
+  --timeline-mine: var(--color-primary-bg);
+  --timeline-mine-text: var(--color-primary);
+  --timeline-free: var(--color-canvas);
+  --timeline-selected: var(--color-primary);
+  --timeline-selected-light: var(--color-primary-bg);
+  --timeline-now: var(--color-danger);
+
+  --font-family:
+    -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-md: 8px;
+  --spacing-lg: 12px;
+  --spacing-xl: 16px;
+  --spacing-2xl: 20px;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  --shadow-light: 0 0 4px 0 rgba(0, 0, 0, 0.1);
+  --shadow-heavy: 0 0 10px rgba(0, 0, 0, 0.3);
+  --shadow-split: 0 -1px 0 0 #f4f6f8;
+
+  --topbar-height: 48px;
+  --sidenav-width: 60px;
+  --menu-active-bar: 4px;
+  --container-max: 1200px;
+  --control-height: 32px;
+  --duration-fast: 150ms;
+  --duration: 200ms;
+  --scrim: rgba(31, 35, 41, 0.45);
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-overlay: 50;
+  --z-toast: 60;
+
   --phone-width: 390px;
   --phone-height: 844px;
 }

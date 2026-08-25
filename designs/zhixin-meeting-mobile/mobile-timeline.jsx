@@ -146,7 +146,7 @@ const MobileMoreSheet = ({ onOpenMine, onClose }) => (
   <div className="modal-overlay" onClick={onClose}>
     <div className="m-action-sheet" onClick={e => e.stopPropagation()}>
       <button type="button" className="m-action-btn" onClick={onOpenMine}>我的预定</button>
-      <button type="button" className="m-action-btn" onClick={onClose} style={{ marginTop: 8, borderRadius: 12 }}>
+      <button type="button" className="m-action-btn m-action-cancel" onClick={onClose}>
         取消
       </button>
     </div>
@@ -282,7 +282,10 @@ const MobileRoomList = ({ rooms, selection, setSelection, isToday, onTapEvent, o
   return (
     <div className="m-room-list">
       {rooms.length === 0 ? (
-        <div className="m-empty">没有符合筛选条件的会议室</div>
+        <div className="m-empty">
+          <span className="m-empty-title">没有符合筛选条件的会议室</span>
+          <span className="m-empty-caption">试试调整日期、楼层或设施</span>
+        </div>
       ) : (
         rooms.map(room => (
           <MobileRoomCard

@@ -1,42 +1,42 @@
 :root {
-  /* Colors */
-  --color-primary: #3E7EFF;
-  --color-primary-pressed: #2E6BE6;
-  --color-primary-border: #D8E5FF;
-  --color-primary-bg: #EBF2FF;
-  --color-on-primary: #FFFFFF;
-  
-  --color-ink: #1F2329;
-  --color-body: #5D616B;
-  --color-mute: #8F959E;
-  --color-disabled: #C9CFD8;
-  --color-control: #C9CFD8;
-  --color-control-active: #E0E4E8;
-  --color-hairline: #E1E5EB;
-  --color-divider: #E7E7E7;
-  --color-canvas: #FFFFFF;
-  --color-canvas-soft: #F4F6F8;
-  
-  --color-success: #36D18E;
-  --color-success-bg: #EAFAF3;
-  --color-warning: #FEAC00;
-  --color-warning-bg: #FEF6E5;
-  --color-danger: #FA4141;
-  --color-danger-pressed: #DD3636;
-  --color-overdue: #FF950A;
-  
-  /* Business Extensions */
-  --color-biz-ts: #63E4D7;
-  --color-biz-ts-bg: #EFFCFB;
-  --color-biz-t0: #B080FF;
-  --color-biz-t0-bg: #F7F2FF;
-  --color-biz-external: #45C5F7;
-  --color-biz-search-hit: #FDF3AA;
+  /* Colors — DESIGN.md */
+  --color-primary: #3e7eff;
+  --color-primary-pressed: #2e6be6;
+  --color-primary-border: #d8e5ff;
+  --color-primary-bg: #ebf2ff;
+  --color-primary-light: #ebf2ff;
+  --color-on-primary: #ffffff;
 
-  /* Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
-  
-  /* Sizing & Spacing */
+  --color-ink: #1f2329;
+  --color-body: #5d616b;
+  --color-mute: #8f959e;
+  --color-disabled: #c9cfd8;
+  --color-control: #c9cfd8;
+  --color-control-active: #e0e4e8;
+  --color-hairline: #e1e5eb;
+  --color-divider: #e7e7e7;
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #f4f6f8;
+
+  --color-success: #36d18e;
+  --color-success-bg: #eafaf3;
+  --color-warning: #feac00;
+  --color-warning-bg: #fef6e5;
+  --color-danger: #fa4141;
+  --color-danger-pressed: #dd3636;
+  --color-overdue: #ff950a;
+
+  --color-biz-ts: #63e4d7;
+  --color-biz-ts-bg: #effcfb;
+  --color-biz-t0: #b080ff;
+  --color-biz-t0-bg: #f7f2ff;
+  --color-biz-external: #45c5f7;
+  --color-biz-search-hit: #fdf3aa;
+
+  --font-family:
+    -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+
   --spacing-xxs: 2px;
   --spacing-xs: 4px;
   --spacing-sm: 6px;
@@ -44,8 +44,7 @@
   --spacing-lg: 12px;
   --spacing-xl: 16px;
   --spacing-2xl: 20px;
-  
-  /* Radii */
+
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -53,14 +52,20 @@
   --radius-pill: 20px;
   --radius-full: 9999px;
 
-  /* Elevation */
   --shadow-light: 0 0 4px 0 rgba(0, 0, 0, 0.1);
   --shadow-heavy: 0 0 10px rgba(0, 0, 0, 0.3);
+  --shadow-split: 0 -1px 0 0 #f4f6f8;
 
-  /* Layout */
   --topbar-height: 48px;
   --sidenav-width: 60px;
   --menu-active-bar: 4px;
   --container-max: 1200px;
   --control-height: 32px;
+  --duration-fast: 150ms;
+  --duration: 200ms;
+  --scrim: rgba(31, 35, 41, 0.45);
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-overlay: 50;
+  --z-toast: 60;
 }

@@ -238,34 +238,28 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
   };
 
   return (
-    <div style={{ maxWidth: 740, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Header Bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <div className="form-page">
+      <div className="form-page-head">
         <button
           type="button"
           className="btn btn-secondary"
           onClick={() => onCancel(isDirty)}
-          style={{ padding: "0 10px" }}
         >
           <window.IconBack /> 返回
         </button>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, lineHeight: "32px", color: "var(--color-ink)" }}>
+        <h1 className="type-title-lg">
           {isEdit ? "编辑会议室" : "新建会议室"}
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Section 1: 基本信息 */}
+      <form onSubmit={handleSubmit} className="form-stack">
         <div className="card-content">
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
-            基本信息
-          </h2>
+          <h2 className="form-section-title">基本信息</h2>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* 会议室名称 */}
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label htmlFor="room-name" style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>会议室名称
+          <div className="form-stack">
+            <div className="form-row">
+              <label htmlFor="room-name" className="form-label-strong">
+                <span className="form-req" aria-hidden="true">*</span>会议室名称
               </label>
               <div>
                 <input
@@ -281,14 +275,14 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                   onBlur={() => handleFieldBlur("name")}
                 />
                 {errors.name && (
-                  <div id="room-name-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginTop: 4 }} role="alert">{errors.name}</div>
+                  <div id="room-name-error" className="form-error" role="alert">{errors.name}</div>
                 )}
               </div>
             </div>
 
             {/* 所属分组 */}
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label htmlFor="room-group" style={{ fontSize: 14, color: "var(--color-body)", marginTop: 6 }}>
+            <div className="form-row">
+              <label htmlFor="room-group" className="form-label">
                 所属分组
               </label>
               <div>
@@ -305,11 +299,11 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
             </div>
 
             {/* 建筑与楼层 */}
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>所在位置
+            <div className="form-row">
+              <label className="form-label-strong">
+                <span className="form-req">*</span>所在位置
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="form-split">
                 <div>
                   <label className="sr-only" htmlFor="room-building">建筑</label>
                   <input
@@ -330,7 +324,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                     ))}
                   </datalist>
                   {errors.buildingName && (
-                    <div id="room-building-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginTop: 4 }} role="alert">{errors.buildingName}</div>
+                    <div id="room-building-error" className="form-error" role="alert">{errors.buildingName}</div>
                   )}
                 </div>
 
@@ -355,25 +349,24 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                     ))}
                   </datalist>
                   {errors.floorName && (
-                    <div id="room-floor-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginTop: 4 }} role="alert">{errors.floorName}</div>
+                    <div id="room-floor-error" className="form-error" role="alert">{errors.floorName}</div>
                   )}
                 </div>
               </div>
             </div>
 
             {/* 容纳人数 */}
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label htmlFor="room-capacity" style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>容纳人数
+            <div className="form-row">
+              <label htmlFor="room-capacity" className="form-label-strong">
+                <span className="form-req" aria-hidden="true">*</span>容纳人数
               </label>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="form-inline">
                 <input
                   id="room-capacity"
                   type="number"
                   min={1}
                   max={999}
-                  className={`input ${errors.capacity ? 'error' : ''}`}
-                  style={{ width: 140 }}
+                  className={`input w-140 ${errors.capacity ? 'error' : ''}`}
                   placeholder="1-999"
                   value={formData.capacity}
                   aria-invalid={Boolean(errors.capacity)}
@@ -381,9 +374,9 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                   onChange={e => handleFieldChange("capacity", e.target.value)}
                   onBlur={() => handleFieldBlur("capacity")}
                 />
-                <span style={{ color: "var(--color-body)", fontSize: 14 }}>人</span>
+                <span>人</span>
                 {errors.capacity && (
-                  <span id="room-capacity-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginLeft: 8 }} role="alert">{errors.capacity}</span>
+                  <span id="room-capacity-error" className="form-error" role="alert">{errors.capacity}</span>
                 )}
               </div>
             </div>
@@ -392,11 +385,9 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
 
         {/* Section 2: 会议室设施 */}
         <div className="card-content">
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
-            会议室设施
-          </h2>
+          <h2 className="form-section-title">会议室设施</h2>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 20, padding: "4px 0" }}>
+          <div className="form-facilities">
             {window.FACILITY_OPTIONS.map(item => (
               <label key={item} className="checkbox-label">
                 <input
@@ -412,34 +403,29 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
 
         {/* Section 3: 预定规则 */}
         <div className="card-content">
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
-            预定规则
-          </h2>
+          <h2 className="form-section-title">预定规则</h2>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* 开放时间 */}
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label htmlFor="room-open-start" style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>开放时间
+          <div className="form-stack">
+            <div className="form-row">
+              <label htmlFor="room-open-start" className="form-label-strong">
+                <span className="form-req" aria-hidden="true">*</span>开放时间
               </label>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div className="form-inline">
                   <input
                     id="room-open-start"
                     type="time"
-                    className={`input ${errors.openHours ? 'error' : ''}`}
-                    style={{ width: 140 }}
+                    className={`input w-140 ${errors.openHours ? 'error' : ''}`}
                     value={formData.openStart}
                     aria-invalid={Boolean(errors.openHours)}
                     onChange={e => handleFieldChange("openStart", e.target.value)}
                     onBlur={() => handleFieldBlur("openHours")}
                   />
-                  <span style={{ color: "var(--color-mute)" }}>至</span>
+                  <span className="text-mute">至</span>
                   <input
                     id="room-open-end"
                     type="time"
-                    className={`input ${errors.openHours ? 'error' : ''}`}
-                    style={{ width: 140 }}
+                    className={`input w-140 ${errors.openHours ? 'error' : ''}`}
                     value={formData.openEnd}
                     aria-invalid={Boolean(errors.openHours)}
                     aria-describedby={errors.openHours ? "room-open-error" : undefined}
@@ -448,21 +434,20 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                   />
                 </div>
                 {errors.openHours && (
-                  <div id="room-open-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginTop: 4 }} role="alert">{errors.openHours}</div>
+                  <div id="room-open-error" className="form-error" role="alert">{errors.openHours}</div>
                 )}
               </div>
             </div>
 
             {/* 可提前预定范围 */}
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label htmlFor="room-book-ahead" style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>提前预定
+            <div className="form-row">
+              <label htmlFor="room-book-ahead" className="form-label-strong">
+                <span className="form-req" aria-hidden="true">*</span>提前预定
               </label>
               <div>
                 <select
                   id="room-book-ahead"
-                  className="select"
-                  style={{ width: 220 }}
+                  className="select w-220"
                   value={formData.bookAheadDays}
                   onChange={e => handleFieldChange("bookAheadDays", Number(e.target.value))}
                 >
@@ -474,9 +459,9 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
             </div>
 
             {/* 开关选项 */}
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16 }}>
-              <label style={{ fontSize: 14, color: "var(--color-body)" }}>预定需审批</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="form-row form-row-center">
+              <label className="form-label">预定需审批</label>
+              <div className="form-inline">
                 <label className="switch">
                   <span className="sr-only">预定需审批</span>
                   <input
@@ -486,15 +471,15 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                   />
                   <span className="slider"></span>
                 </label>
-                <span style={{ fontSize: 13, color: "var(--color-mute)" }}>
+                <span className="form-hint">
                   {formData.needApproval ? "开启" : "关闭"}（仅数据落库）
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16 }}>
-              <label style={{ fontSize: 14, color: "var(--color-body)" }}>允许周期预定</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="form-row form-row-center">
+              <label className="form-label">允许周期预定</label>
+              <div className="form-inline">
                 <label className="switch">
                   <span className="sr-only">允许周期预定</span>
                   <input
@@ -504,15 +489,15 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                   />
                   <span className="slider"></span>
                 </label>
-                <span style={{ fontSize: 13, color: "var(--color-mute)" }}>
+                <span className="form-hint">
                   {formData.allowRecurring ? "开启" : "关闭"}（仅数据落库）
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16 }}>
-              <label style={{ fontSize: 14, color: "var(--color-body)" }}>支持会议室抢占</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="form-row form-row-center">
+              <label className="form-label">支持会议室抢占</label>
+              <div className="form-inline">
                 <label className="switch">
                   <span className="sr-only">支持会议室抢占</span>
                   <input
@@ -522,18 +507,18 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                   />
                   <span className="slider"></span>
                 </label>
-                <span style={{ fontSize: 13, color: "var(--color-mute)" }}>
+                <span className="form-hint">
                   {formData.allowPreempt ? "开启" : "关闭"}（仅数据落库）
                 </span>
               </div>
             </div>
 
             {/* 初始状态 */}
-            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", gap: 16, paddingTop: 4 }}>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)" }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>状态
+            <div className="form-row form-row-center">
+              <label className="form-label-strong">
+                <span className="form-req">*</span>状态
               </label>
-              <div style={{ display: "flex", gap: 24 }}>
+              <div className="form-inline" style={{ gap: 20 }}>
                 <label className="radio-label">
                   <input
                     type="radio"
@@ -559,12 +544,10 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
 
         {/* Section 4: 备注 */}
         <div className="card-content">
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
-            备注信息
-          </h2>
+          <h2 className="form-section-title">备注信息</h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-            <label htmlFor="room-note" style={{ fontSize: 14, color: "var(--color-body)", marginTop: 6 }}>
+          <div className="form-row">
+            <label htmlFor="room-note" className="form-label">
               备注
             </label>
             <div>
@@ -576,7 +559,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                 value={formData.locationNote}
                 onChange={e => handleFieldChange("locationNote", e.target.value)}
               />
-              <div style={{ textAlign: "right", fontSize: 12, color: "var(--color-mute)", marginTop: 4 }}>
+              <div className="form-count">
                 {(formData.locationNote || "").length} / 100
               </div>
             </div>
@@ -584,7 +567,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
         </div>
 
         {/* Footer Actions */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingBottom: 40 }}>
+        <div className="form-footer">
           <button
             type="button"
             className="btn btn-secondary"

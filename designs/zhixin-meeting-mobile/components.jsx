@@ -15,7 +15,7 @@ const MobileRoomDetailModal = ({ room, onClose, onBookNow }) => {
           <div className="form-group-card">
             <div className="form-cell">
               <span className="form-cell-label">会议室名称</span>
-              <span className="form-cell-value" style={{ fontWeight: 700 }}>{room.name}</span>
+              <span className="form-cell-value" style={{ fontWeight: 500 }}>{room.name}</span>
             </div>
             <div className="form-cell">
               <span className="form-cell-label">所在位置</span>
@@ -101,9 +101,9 @@ const MobileCreateScheduleModal = ({ room, rangeText, dateLabel, fullScreen, onC
       >
         <div className="sheet-drag-handle" />
         <div className="sheet-header">
-          <button type="button" className="navbar-action" onClick={onClose} style={{ color: "#64748B" }}>取消</button>
+          <button type="button" className="navbar-action" onClick={onClose} style={{ color: "var(--color-body)" }}>取消</button>
           <span className="sheet-title">新建日程</span>
-          <button type="button" className="navbar-action" onClick={handleSubmit} style={{ fontWeight: 700 }}>完成</button>
+          <button type="button" className="navbar-action" onClick={handleSubmit} style={{ fontWeight: 500 }}>完成</button>
         </div>
 
         <div className="sheet-body">
@@ -115,7 +115,7 @@ const MobileCreateScheduleModal = ({ room, rangeText, dateLabel, fullScreen, onC
                 placeholder="填写会议主题..."
                 value={title}
                 onChange={e => setTitle(e.target.value)}
-                style={{ fontSize: 16, fontWeight: 600 }}
+                style={{ fontSize: 16, fontWeight: 500 }}
               />
             </div>
           </div>
@@ -123,19 +123,19 @@ const MobileCreateScheduleModal = ({ room, rangeText, dateLabel, fullScreen, onC
           <div className="form-group-card">
             <div className="form-cell">
               <span className="form-cell-label">会议室</span>
-              <span className="form-cell-value" style={{ color: "var(--color-primary)", fontWeight: 600 }}>
+              <span className="form-cell-value" style={{ color: "var(--color-primary)", fontWeight: 500 }}>
                 {room.name}（{room.building} {room.floor}）
               </span>
             </div>
             <div className="form-cell">
               <span className="form-cell-label">预定时段</span>
-              <span className="form-cell-value" style={{ fontWeight: 600, color: "#1E40AF" }}>
+              <span className="form-cell-value" style={{ fontWeight: 500, color: "var(--color-primary)" }}>
                 {dateText} · {timeStr}
               </span>
             </div>
             <div className="form-cell">
-              <span className="form-cell-label">参会人</span>
-              <span className="form-cell-value">李明(发起人)、张伟、王芳 +</span>
+              <span className="form-cell-label">预定人</span>
+              <span className="form-cell-value">李明</span>
             </div>
           </div>
 
@@ -168,57 +168,69 @@ const MobileCreateScheduleModal = ({ room, rangeText, dateLabel, fullScreen, onC
   );
 };
 
-// 我的预定（钉钉 13）+ 释放入口（钉钉 14）
-const MobileMyBookingsView = ({ bookings, onReleaseBooking }) => (
-  <div className="bookings-grid">
-    {bookings.length === 0 ? (
-      <div className="m-empty">暂无预定日程</div>
-    ) : (
-      bookings.map(b => (
-        <div key={b.id} className="room-timeline-card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#0F172A" }}>{b.title}</div>
-            <span
-              className="room-status-badge"
-              style={{
-                background: b.status === "ongoing" ? "#ECFDF5" : "#EFF6FF",
-                color: b.status === "ongoing" ? "#059669" : "#2563EB",
-                border: b.status === "ongoing" ? "1px solid #A7F3D0" : "1px solid #BFDBFE"
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor" }} />
-              {b.status === "ongoing" ? "进行中" : "待开始"}
-            </span>
-          </div>
+// 我的预定：弹窗列表 + 释放入口
+const MobileMyBookingsModal = ({ bookings, onReleaseBooking, onClose }) => {
+  React.useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "14px 0", fontSize: 13, color: "#475569" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <window.IconClock />
-              <span>{b.date} {b.timeRange}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <window.IconLocation />
-              <span>{b.roomName}（{b.building} {b.floor}）</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <window.IconUser />
-              <span>参会人员：{b.members.join("、")}</span>
-            </div>
-          </div>
-
-          <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 12, display: "flex", gap: 10 }}>
-            <button type="button" className="btn-m-danger" onClick={() => onReleaseBooking(b)}>
-              提前释放会议室
-            </button>
-          </div>
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="bottom-sheet bookings-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bookings-dialog-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sheet-drag-handle" />
+        <div className="sheet-header">
+          <span id="bookings-dialog-title" className="sheet-title">我的预定</span>
+          <button type="button" className="navbar-action" onClick={onClose}>关闭</button>
         </div>
-      ))
-    )}
-  </div>
-);
+        <div className="sheet-body bookings-dialog-body">
+          {bookings.length === 0 ? (
+            <div className="bookings-empty">
+              <span className="bookings-empty-title">暂无预定</span>
+              <span className="bookings-empty-caption">在时间轴上拖选空闲时段即可预定</span>
+            </div>
+          ) : (
+            <ul className="booking-list">
+              {bookings.map((b) => (
+                <li key={b.id} className="booking-row">
+                  <div className="booking-row-main">
+                    <div className="booking-row-head">
+                      <span className="booking-row-title">{b.title}</span>
+                      <span className={`room-status-badge ${b.status === "ongoing" ? "ongoing" : "upcoming"}`}>
+                        {b.status === "ongoing" ? "进行中" : "待开始"}
+                      </span>
+                    </div>
+                    <div className="booking-row-meta">{b.date} {b.timeRange}</div>
+                    <div className="booking-row-meta">{b.roomName}（{b.building} {b.floor}）</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="booking-release"
+                    onClick={() => onReleaseBooking(b)}
+                  >
+                    释放
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 Object.assign(window, {
   MobileRoomDetailModal,
   MobileCreateScheduleModal,
-  MobileMyBookingsView
+  MobileMyBookingsModal
 });
