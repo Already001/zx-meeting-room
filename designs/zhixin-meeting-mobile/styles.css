@@ -324,6 +324,28 @@ html, body {
   z-index: 2;
 }
 
+.m-mini-now {
+  position: absolute;
+  top: 0;
+  height: 20px;
+  width: 2px;
+  margin-left: -1px;
+  background: #FF4D4F;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.m-mini-now::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #FF4D4F;
+}
+
 .m-mini-hours {
   display: flex;
   margin-top: 4px;
@@ -783,6 +805,64 @@ html, body {
 .pc-select:hover,
 .pc-search:hover { border-color: #B8BFC9; }
 
+.pc-select.active {
+  border-color: #1677FF;
+  color: #1677FF;
+}
+
+.pc-select:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.pc-dropdown {
+  position: relative;
+}
+
+.pc-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  min-width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid #EBEDF0;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(31, 35, 41, 0.12);
+  padding: 4px 0;
+}
+
+.pc-menu-wide { min-width: 160px; }
+.pc-menu-date { min-width: 220px; max-height: 360px; }
+
+.pc-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1F2329;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pc-menu-item:hover { background: #F4F6F8; }
+.pc-menu-item.active { color: #1677FF; background: #F0F6FF; }
+
+.pc-empty {
+  padding: 80px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #8F959E;
+}
+
 .pc-select-wide { min-width: 200px; }
 .pc-select-narrow { min-width: 62px; }
 .pc-date-select { min-width: 172px; }
@@ -1064,7 +1144,34 @@ html, body {
   width: 1px;
 }
 
-.tl-line-now { background: #FF7875; }
+.tl-line-now { background: #FF4D4F; }
+
+.tl-line-now::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3.5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #FF4D4F;
+}
+
+.tl-past {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(244, 246, 248, 0.92),
+    rgba(244, 246, 248, 0.92) 5px,
+    rgba(232, 234, 237, 0.92) 5px,
+    rgba(232, 234, 237, 0.92) 10px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
 .tl-line-pick { background: #1677FF; }
 
 .tl-line-pick::before {

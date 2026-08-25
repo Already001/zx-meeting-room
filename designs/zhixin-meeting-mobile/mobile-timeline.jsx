@@ -3,11 +3,6 @@
 
 const M_DEFAULT_DURATION = 60;
 
-const nextOpenMinute = (nowMin) => {
-  const snapped = Math.ceil(nowMin / window.TL.SNAP) * window.TL.SNAP;
-  return Math.max(window.TL.LIST_START, snapped);
-};
-
 const MobileHomeSearch = ({ value, onChange }) => (
   <label className="m-search">
     <window.IconSearch />
@@ -195,6 +190,9 @@ const MobileMiniBar = ({ room, selection, nowMin, isToday, onTapTrack, onTapEven
             style={{ left: window.TL.listPct(selection.start), width: window.TL.listWidth(selection.start, selection.end) }}
           />
         )}
+        {isToday && nowMin >= window.TL.LIST_START && nowMin <= window.TL.LIST_END && (
+          <span className="m-mini-now" style={{ left: window.TL.listPct(nowMin) }} />
+        )}
       </div>
       <div className="m-mini-hours">
         {window.TL.LIST_HOURS.map(h => (
@@ -270,7 +268,7 @@ const MobileRoomList = ({ rooms, selection, setSelection, isToday, onTapEvent, o
     }
 
     let [low, high] = window.TL.freeBounds(room, minute);
-    low = Math.max(low, window.TL.LIST_START, isToday ? nextOpenMinute(nowMin) : window.TL.LIST_START);
+    low = Math.max(low, window.TL.LIST_START, isToday ? window.TL.nextOpen(nowMin, window.TL.LIST_START) : window.TL.LIST_START);
     high = Math.min(high, window.TL.LIST_END);
     const start = Math.max(low, minute);
     const end = Math.min(high, start + M_DEFAULT_DURATION);

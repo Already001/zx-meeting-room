@@ -61,6 +61,12 @@ window.TL = {
 
   isBusyAt: (room, minute) => Boolean(window.TL.eventAt(room, minute)),
 
+  // 当前时刻之后最近的半小时刻度，选择不能落到「现在」之前
+  nextOpen: (nowMin, floor = 0) => {
+    const snapped = Math.ceil(nowMin / SNAP_MIN) * SNAP_MIN;
+    return Math.max(floor, Math.min(DAY_MIN, snapped));
+  },
+
   // 以 anchor 为中心找到最近的占用边界，选择区间不能跨过已占用时段
   freeBounds: (room, anchor) => {
     let low = 0;
@@ -107,7 +113,6 @@ window.MOBILE_ROOMS = [
     facilities: ["电视", "投影仪", "白板"],
     locationNote: "7层电梯口右转第一间",
     openTime: "07:00 - 23:00",
-    needApproval: false,
     allowRecurring: true,
     busyEvents: [
       window.makeEvent({ start: "10:00", end: "12:00", title: "移动端体验对齐", host: "李厚霖", dept: "产品设计部" }),
@@ -124,7 +129,6 @@ window.MOBILE_ROOMS = [
     facilities: ["电视", "电话"],
     locationNote: "7层走廊尽头",
     openTime: "08:30 - 21:00",
-    needApproval: false,
     allowRecurring: true,
     busyEvents: [
       window.makeEvent({ start: "08:30", end: "10:00", title: "敏捷晨会", host: "王芳", dept: "业务一部" }),
@@ -142,7 +146,6 @@ window.MOBILE_ROOMS = [
     facilities: ["电视", "投影仪", "白板", "视频会议"],
     locationNote: "8层东区大厅，配双屏",
     openTime: "09:00 - 22:00",
-    needApproval: true,
     allowRecurring: false,
     busyEvents: [
       window.makeEvent({ start: "09:30", end: "12:30", title: "Q3全员战略宣讲会", host: "刘总", dept: "管理层" }),
@@ -159,7 +162,6 @@ window.MOBILE_ROOMS = [
     facilities: ["电视", "电话", "视频会议"],
     locationNote: "B座501",
     openTime: "09:00 - 18:00",
-    needApproval: true,
     allowRecurring: false,
     busyEvents: [
       window.makeEvent({ start: "09:00", end: "11:00", title: "重要商务客户接待", host: "王总", dept: "战略合作部" })

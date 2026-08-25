@@ -102,6 +102,11 @@ const App = () => {
 
   const selectedRoom = selection ? rooms.find(r => r.id === selection.roomId) : null;
 
+  React.useEffect(() => {
+    if (!selection) return;
+    if (!visibleRooms.some(r => r.id === selection.roomId)) setSelection(null);
+  }, [visibleRooms, selection]);
+
   const shiftDay = (delta) => {
     setBoardDate(prev => {
       const next = new Date(prev);
@@ -229,17 +234,43 @@ const App = () => {
     </div>
   ) : null;
 
+  const resetFilters = () => {
+    setFilters({ place: "all", capacity: "all", facilities: [] });
+    setKeyword("");
+    setSelection(null);
+  };
+
+  const resetHomeFilters = () => {
+    resetFilters();
+    setBoardDate(new Date(BASE_DATE));
+  };
+
   if (isPc) {
     return (
       <div className="pc-app">
         <window.PcToolbar
           dateLabel={dateLabel}
+          days={days}
+          selectedDate={selectedDate}
+          onSelectDate={(value) => {
+            setBoardDate(new Date(`${value}T00:00:00`));
+            setSelection(null);
+          }}
           onPrevDay={() => shiftDay(-1)}
           onNextDay={() => shiftDay(1)}
           onToday={() => {
             setBoardDate(new Date(BASE_DATE));
             setSelection(null);
           }}
+          keyword={keyword}
+          onKeyword={setKeyword}
+          filters={filters}
+          places={places}
+          onFilters={(next) => {
+            setFilters(next);
+            setSelection(null);
+          }}
+          onReset={resetFilters}
           showHost={showHost}
           onToggleHost={() => setShowHost(v => !v)}
           showLegend={showLegend}
@@ -256,6 +287,7 @@ const App = () => {
             selection={selection}
             setSelection={setSelection}
             showHost={showHost}
+            isToday={isToday}
             onCommit={handleCommitRange}
             onNotice={showToast}
           />
@@ -275,13 +307,6 @@ const App = () => {
       </div>
     );
   }
-
-  const resetHomeFilters = () => {
-    setFilters({ place: "all", capacity: "all", facilities: [] });
-    setKeyword("");
-    setBoardDate(new Date(BASE_DATE));
-    setSelection(null);
-  };
 
   return (
     <div className="m-app">

@@ -17,36 +17,161 @@ const useNowMinutes = () => {
 };
 
 // 顶部双层工具栏
-const PcToolbar = ({ dateLabel, onPrevDay, onNextDay, onToday, showHost, onToggleHost, showLegend, onToggleLegend, onOpenMine, onNotice }) => (
+const PcToolbar = ({
+  dateLabel,
+  days,
+  selectedDate,
+  onSelectDate,
+  onPrevDay,
+  onNextDay,
+  onToday,
+  keyword,
+  onKeyword,
+  filters,
+  places,
+  onFilters,
+  onReset,
+  showHost,
+  onToggleHost,
+  showLegend,
+  onToggleLegend,
+  onOpenMine,
+  onNotice
+}) => {
+  const [openMenu, setOpenMenu] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!openMenu) return undefined;
+    const onDown = () => setOpenMenu(null);
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [openMenu]);
+
+  const toggleMenu = (name) => setOpenMenu(prev => (prev === name ? null : name));
+
+  const placeLabel = filters.place === "all" ? "建筑 · 楼层" : filters.place;
+  const facilityLabel = filters.facilities.length > 0 ? `设施 ${filters.facilities.length}` : "设施";
+
+  const toggleFacility = (name) => {
+    const next = filters.facilities.includes(name)
+      ? filters.facilities.filter(f => f !== name)
+      : [...filters.facilities, name];
+    onFilters({ ...filters, facilities: next });
+  };
+
+  return (
   <div className="pc-toolbar">
     <div className="pc-toolbar-row">
       <button type="button" className="pc-select" onClick={() => onNotice("切换企业 / 组织")}>
         <span>Nic测试</span>
         <window.IconCaretDown />
       </button>
-      <button type="button" className="pc-select pc-select-wide" onClick={() => onNotice("按建筑 · 楼层筛选")}>
-        <span className="pc-select-placeholder">建筑 · 楼层</span>
-        <window.IconCaretDown />
-      </button>
+
+      <div className="pc-dropdown" onPointerDown={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className={`pc-select pc-select-wide ${filters.place !== "all" ? "active" : ""}`}
+          onClick={() => toggleMenu("place")}
+        >
+          <span className={filters.place === "all" ? "pc-select-placeholder" : ""}>{placeLabel}</span>
+          <window.IconCaretDown />
+        </button>
+        {openMenu === "place" && (
+          <div className="pc-menu">
+            <button
+              type="button"
+              className={`pc-menu-item ${filters.place === "all" ? "active" : ""}`}
+              onClick={() => {
+                onFilters({ ...filters, place: "all" });
+                setOpenMenu(null);
+              }}
+            >
+              全部建筑楼层
+            </button>
+            {places.map(p => (
+              <button
+                type="button"
+                key={p}
+                className={`pc-menu-item ${filters.place === p ? "active" : ""}`}
+                onClick={() => {
+                  onFilters({ ...filters, place: p });
+                  setOpenMenu(null);
+                }}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="pc-search">
         <window.IconSearch />
-        <input type="text" placeholder="搜索会议室" onChange={() => onNotice("按名称搜索会议室")} />
+        <input
+          type="text"
+          placeholder="搜索会议室"
+          value={keyword}
+          onChange={(e) => onKeyword(e.target.value)}
+        />
       </div>
+
+      <div className="pc-dropdown" onPointerDown={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className={`pc-select ${filters.facilities.length > 0 ? "active" : ""}`}
+          onClick={() => toggleMenu("facilities")}
+        >
+          <span className={filters.facilities.length === 0 ? "pc-select-placeholder" : ""}>{facilityLabel}</span>
+          <window.IconCaretDown />
+        </button>
+        {openMenu === "facilities" && (
+          <div className="pc-menu pc-menu-wide">
+            {window.FACILITY_OPTIONS.map(f => (
+              <button
+                type="button"
+                key={f}
+                className={`pc-menu-item ${filters.facilities.includes(f) ? "active" : ""}`}
+                onClick={() => toggleFacility(f)}
+              >
+                <span>{f}</span>
+                {filters.facilities.includes(f) && <window.IconCheck />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button type="button" className="pc-text-btn" onClick={onReset}>重置</button>
       <button type="button" className="pc-icon-btn" title="刷新" onClick={() => onNotice("已刷新会议室占用")}>
         <window.IconRefresh />
-      </button>
-      <button type="button" className="pc-text-btn" onClick={() => onNotice("展开高级筛选：人数 / 设施 / 审批")}>
-        <span>高级筛选</span>
-        <window.IconCaretDown />
       </button>
       <button type="button" className="pc-text-btn pc-toolbar-end" onClick={onOpenMine}>我的预定</button>
     </div>
 
     <div className="pc-toolbar-row pc-toolbar-row-sub">
-      <button type="button" className="pc-select pc-date-select" onClick={() => onNotice("选择日期")}>
-        <span>{dateLabel}</span>
-        <window.IconCalendarSmall />
-      </button>
+      <div className="pc-dropdown" onPointerDown={(e) => e.stopPropagation()}>
+        <button type="button" className="pc-select pc-date-select" onClick={() => toggleMenu("date")}>
+          <span>{dateLabel}</span>
+          <window.IconCalendarSmall />
+        </button>
+        {openMenu === "date" && (
+          <div className="pc-menu pc-menu-date">
+            {days.map(d => (
+              <button
+                type="button"
+                key={d.value}
+                className={`pc-menu-item ${selectedDate === d.value ? "active" : ""}`}
+                onClick={() => {
+                  onSelectDate(d.value);
+                  setOpenMenu(null);
+                }}
+              >
+                {d.chip}{d.week === "今天" ? "（今天）" : d.week === "明天" ? "（明天）" : ""}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <button type="button" className="pc-icon-btn" title="前一天" onClick={onPrevDay}>
         <window.IconArrowLeft />
       </button>
@@ -54,9 +179,8 @@ const PcToolbar = ({ dateLabel, onPrevDay, onNextDay, onToday, showHost, onToggl
       <button type="button" className="pc-icon-btn" title="后一天" onClick={onNextDay}>
         <window.IconArrowRight />
       </button>
-      <button type="button" className="pc-select pc-select-narrow" onClick={() => onNotice("切换 日 / 周 视图")}>
+      <button type="button" className="pc-select pc-select-narrow" disabled>
         <span>日</span>
-        <window.IconCaretDown />
       </button>
 
       <div className="pc-toolbar-end pc-toolbar-tools">
@@ -81,14 +205,15 @@ const PcToolbar = ({ dateLabel, onPrevDay, onNextDay, onToday, showHost, onToggl
         <span className="pc-legend-item"><i className="pc-legend-dot busy" />他人已预定</span>
         <span className="pc-legend-item"><i className="pc-legend-dot mine" />我的预定</span>
         <span className="pc-legend-item"><i className="pc-legend-dot picking" />当前选择</span>
-        <span className="pc-legend-hint">在空闲区域按住并横向拖动即可选择时段</span>
+        <span className="pc-legend-hint">空闲区域拖选时段；红色为当前时间，此刻之前不可预定</span>
       </div>
     )}
   </div>
-);
+  );
+};
 
 // 单个会议室行
-const PcRoomRow = ({ room, selection, showHost, onPointerDown, onShowTip, onHideTip, onConfirm, onCancel }) => {
+const PcRoomRow = ({ room, selection, showHost, isToday, nowMin, onPointerDown, onShowTip, onHideTip, onConfirm, onCancel }) => {
   const isPicking = selection && selection.roomId === room.id;
 
   return (
@@ -104,6 +229,9 @@ const PcRoomRow = ({ room, selection, showHost, onPointerDown, onShowTip, onHide
       </div>
 
       <div className="tl-track" onPointerDown={(e) => onPointerDown(room, e)}>
+        {isToday && nowMin > 0 && (
+          <span className="tl-past" style={{ width: window.TL.pct(nowMin) }} />
+        )}
         {(room.busyEvents || []).map(ev => {
           const start = window.toMinutes(ev.start);
           const end = window.toMinutes(ev.end);
@@ -157,7 +285,7 @@ const PcRoomRow = ({ room, selection, showHost, onPointerDown, onShowTip, onHide
 };
 
 // 看板主体
-const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, onCommit, onNotice }) => {
+const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, onCommit, onNotice }) => {
   const nowMin = useNowMinutes();
   const dragRef = React.useRef(null);
   const [tip, setTip] = React.useState(null);
@@ -169,20 +297,35 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, onCommit, o
     const track = e.currentTarget;
     const rect = track.getBoundingClientRect();
     const anchor = window.TL.minuteAt(rect, e.clientX);
+    if (isToday && anchor < nowMin) {
+      onNotice("该时段已过期");
+      return;
+    }
     if (window.TL.isBusyAt(room, anchor)) {
       onNotice("该时段已被占用，请选择空闲区域");
       return;
     }
 
-    const [low, high] = window.TL.freeBounds(room, anchor);
-    dragRef.current = { room, rect, anchor, low, high };
-    track.setPointerCapture(e.pointerId);
+    let [low, high] = window.TL.freeBounds(room, anchor);
+    if (isToday) low = Math.max(low, window.TL.nextOpen(nowMin));
+    if (high - low < window.TL.SNAP) {
+      onNotice("剩余空闲不足 30 分钟");
+      return;
+    }
+
+    const start = Math.max(low, anchor);
+    dragRef.current = { room, rect, anchor: start, low, high };
     setSelection({
       roomId: room.id,
-      start: anchor,
-      end: Math.min(high, anchor + window.TL.SNAP),
+      start,
+      end: Math.min(high, start + window.TL.SNAP),
       confirmed: false
     });
+    try {
+      track.setPointerCapture(e.pointerId);
+    } catch (err) {
+      // 无真实 pointer 时（自动化或部分浏览器）仍保留选中态
+    }
   };
 
   const handlePointerMove = (e) => {
@@ -194,6 +337,7 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, onCommit, o
     if (end === start) end = start + window.TL.SNAP;
     start = Math.max(drag.low, start);
     end = Math.min(drag.high, end);
+    if (end - start < window.TL.SNAP) return;
     setSelection({ roomId: drag.room.id, start, end, confirmed: false });
   };
 
@@ -223,9 +367,11 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, onCommit, o
                 {String(h).padStart(2, "0")}:00
               </span>
             ))}
-            <span className="tl-axis-now" style={{ left: window.TL.pct(nowMin) }}>
-              {window.fromMinutes(nowMin)}
-            </span>
+            {isToday && (
+              <span className="tl-axis-now" style={{ left: window.TL.pct(nowMin) }}>
+                {window.fromMinutes(nowMin)}
+              </span>
+            )}
             {selection && (
               <React.Fragment>
                 <span className="tl-axis-pick" style={{ left: window.TL.pct(selection.start) }}>
@@ -243,7 +389,7 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, onCommit, o
           <div className="tl-guides">
             <div className="tl-room-cell tl-guides-spacer" />
             <div className="tl-track">
-              <span className="tl-line-now" style={{ left: window.TL.pct(nowMin) }} />
+              {isToday && <span className="tl-line-now" style={{ left: window.TL.pct(nowMin) }} />}
               {selection && (
                 <React.Fragment>
                   <span className="tl-line-pick" style={{ left: window.TL.pct(selection.start) }} />
@@ -253,19 +399,25 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, onCommit, o
             </div>
           </div>
 
-          {rooms.map(room => (
-            <PcRoomRow
-              key={room.id}
-              room={room}
-              selection={selection}
-              showHost={showHost}
-              onPointerDown={handlePointerDown}
-              onShowTip={showTip}
-              onHideTip={() => setTip(null)}
-              onConfirm={onCommit}
-              onCancel={() => setSelection(null)}
-            />
-          ))}
+          {rooms.length === 0 ? (
+            <div className="pc-empty">没有符合筛选条件的会议室</div>
+          ) : (
+            rooms.map(room => (
+              <PcRoomRow
+                key={room.id}
+                room={room}
+                selection={selection}
+                showHost={showHost}
+                isToday={isToday}
+                nowMin={nowMin}
+                onPointerDown={handlePointerDown}
+                onShowTip={showTip}
+                onHideTip={() => setTip(null)}
+                onConfirm={onCommit}
+                onCancel={() => setSelection(null)}
+              />
+            ))
+          )}
         </div>
       </div>
 
