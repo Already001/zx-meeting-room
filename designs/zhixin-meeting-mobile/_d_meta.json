@@ -1,0 +1,19 @@
+{
+  "type": "design",
+  "designSystems": [],
+  "primaryDesignSystem": null,
+  "assets": {
+    "Mobile Room Reservation": {
+      "versions": [
+        {
+          "path": "Mobile Room Reservation.html",
+          "createdAt": "2026-08-24T09:20:00.000Z",
+          "status": "needs-review",
+          "subtitle": "智信智能会议室预定高保真交互原型 (移动 + PC 自适应)"
+        }
+      ]
+    }
+  },
+  "createdAt": "2026-08-24T09:20:00.000Z",
+  "updatedAt": "2026-08-24T09:56:00.000Z"
+}
