@@ -105,15 +105,16 @@ const PcToolbar = ({
         )}
       </div>
 
-      <div className="pc-search">
+      <label className="pc-search">
+        <span className="sr-only">搜索会议室</span>
         <window.IconSearch />
         <input
-          type="text"
+          type="search"
           placeholder="搜索会议室"
           value={keyword}
           onChange={(e) => onKeyword(e.target.value)}
         />
-      </div>
+      </label>
 
       <div className="pc-dropdown" onPointerDown={(e) => e.stopPropagation()}>
         <button
@@ -142,7 +143,7 @@ const PcToolbar = ({
       </div>
 
       <button type="button" className="pc-text-btn" onClick={onReset}>重置</button>
-      <button type="button" className="pc-icon-btn" title="刷新" onClick={() => onNotice("已刷新会议室占用")}>
+      <button type="button" className="pc-icon-btn" title="刷新" aria-label="刷新" onClick={() => onNotice("已刷新会议室占用")}>
         <window.IconRefresh />
       </button>
       <button type="button" className="pc-text-btn pc-toolbar-end" onClick={onOpenMine}>我的预定</button>
@@ -172,11 +173,11 @@ const PcToolbar = ({
           </div>
         )}
       </div>
-      <button type="button" className="pc-icon-btn" title="前一天" onClick={onPrevDay}>
+      <button type="button" className="pc-icon-btn" title="前一天" aria-label="前一天" onClick={onPrevDay}>
         <window.IconArrowLeft />
       </button>
       <button type="button" className="pc-text-btn pc-today-btn" onClick={onToday}>回到今天</button>
-      <button type="button" className="pc-icon-btn" title="后一天" onClick={onNextDay}>
+      <button type="button" className="pc-icon-btn" title="后一天" aria-label="后一天" onClick={onNextDay}>
         <window.IconArrowRight />
       </button>
       <button type="button" className="pc-select pc-select-narrow" disabled>
@@ -205,7 +206,7 @@ const PcToolbar = ({
         <span className="pc-legend-item"><i className="pc-legend-dot busy" />他人已预定</span>
         <span className="pc-legend-item"><i className="pc-legend-dot mine" />我的预定</span>
         <span className="pc-legend-item"><i className="pc-legend-dot picking" />当前选择</span>
-        <span className="pc-legend-hint">空闲区域拖选时段；红色为当前时间，此刻之前不可预定</span>
+        <span className="pc-legend-hint">空闲区域拖选时段；当前时间线之前不可预定</span>
       </div>
     )}
   </div>

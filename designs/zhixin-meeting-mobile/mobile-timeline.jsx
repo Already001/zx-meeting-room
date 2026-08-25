@@ -5,6 +5,7 @@ const M_DEFAULT_DURATION = 60;
 
 const MobileHomeSearch = ({ value, onChange }) => (
   <label className="m-search">
+    <span className="sr-only">搜索会议室</span>
     <window.IconSearch />
     <input
       type="search"
@@ -18,13 +19,15 @@ const MobileHomeSearch = ({ value, onChange }) => (
 const MobileHomeFilterBar = ({ dateText, filters, onOpen, onReset }) => (
   <div className="m-home-filters">
     <div className="m-home-filters-scroll">
-      <button type="button" className="m-filter-chip date" onClick={() => onOpen("date")}>
+      <button type="button" className="m-filter-chip date" aria-haspopup="dialog" onClick={() => onOpen("date")}>
         <span>{dateText}</span>
         <window.IconCaretDown />
       </button>
       <button
         type="button"
         className={`m-filter-chip ${filters.place !== "all" ? "active" : ""}`}
+        aria-pressed={filters.place !== "all"}
+        aria-haspopup="dialog"
         onClick={() => onOpen("place")}
       >
         <span>{filters.place === "all" ? "建筑·楼层" : filters.place}</span>
@@ -33,6 +36,8 @@ const MobileHomeFilterBar = ({ dateText, filters, onOpen, onReset }) => (
       <button
         type="button"
         className={`m-filter-chip ${filters.facilities.length > 0 ? "active" : ""}`}
+        aria-pressed={filters.facilities.length > 0}
+        aria-haspopup="dialog"
         onClick={() => onOpen("facilities")}
       >
         <span>{filters.facilities.length > 0 ? `设施 ${filters.facilities.length}` : "设施"}</span>
@@ -43,13 +48,15 @@ const MobileHomeFilterBar = ({ dateText, filters, onOpen, onReset }) => (
   </div>
 );
 
-const MobileDateSheet = ({ days, selectedDate, onSelect, onClose }) => (
+const MobileDateSheet = ({ days, selectedDate, onSelect, onClose }) => {
+  window.useOverlayClose(onClose);
+  return (
   <div className="modal-overlay" onClick={onClose}>
-    <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
+    <div className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="date-sheet-title" onClick={e => e.stopPropagation()}>
       <div className="sheet-drag-handle" />
       <div className="sheet-header">
         <button type="button" className="navbar-action" onClick={onClose}>关闭</button>
-        <span className="sheet-title">选择日期</span>
+        <span id="date-sheet-title" className="sheet-title">选择日期</span>
         <span style={{ width: 40 }} />
       </div>
       <div className="sheet-body">
@@ -69,11 +76,13 @@ const MobileDateSheet = ({ days, selectedDate, onSelect, onClose }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const MobileFilterSheet = ({ type, filters, places, onApply, onClose }) => {
   const [draft, setDraft] = React.useState(filters);
   const title = type === "place" ? "建筑 · 楼层" : "设备设施";
+  window.useOverlayClose(onClose);
 
   const toggleFacility = (name) => {
     setDraft(prev => ({
@@ -86,11 +95,11 @@ const MobileFilterSheet = ({ type, filters, places, onApply, onClose }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
+      <div className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-sheet-title" onClick={e => e.stopPropagation()}>
         <div className="sheet-drag-handle" />
         <div className="sheet-header">
           <button type="button" className="navbar-action" onClick={onClose}>关闭</button>
-          <span className="sheet-title">{title}</span>
+          <span id="filter-sheet-title" className="sheet-title">{title}</span>
           <span style={{ width: 40 }} />
         </div>
 
@@ -118,6 +127,7 @@ const MobileFilterSheet = ({ type, filters, places, onApply, onClose }) => {
                   type="button"
                   key={f}
                   className={`m-chip ${draft.facilities.includes(f) ? "active" : ""}`}
+                  aria-pressed={draft.facilities.includes(f)}
                   onClick={() => toggleFacility(f)}
                 >
                   {f}
@@ -142,16 +152,19 @@ const MobileFilterSheet = ({ type, filters, places, onApply, onClose }) => {
   );
 };
 
-const MobileMoreSheet = ({ onOpenMine, onClose }) => (
+const MobileMoreSheet = ({ onOpenMine, onClose }) => {
+  window.useOverlayClose(onClose);
+  return (
   <div className="modal-overlay" onClick={onClose}>
-    <div className="m-action-sheet" onClick={e => e.stopPropagation()}>
+    <div className="m-action-sheet" role="dialog" aria-modal="true" aria-label="更多操作" onClick={e => e.stopPropagation()}>
       <button type="button" className="m-action-btn" onClick={onOpenMine}>我的预定</button>
-      <button type="button" className="m-action-btn" onClick={onClose} style={{ marginTop: 8, borderRadius: 12 }}>
+      <button type="button" className="m-action-btn" onClick={onClose} style={{ marginTop: 8, borderRadius: "var(--radius-lg)" }}>
         取消
       </button>
     </div>
   </div>
-);
+  );
+};
 
 const MobileMiniBar = ({ room, selection, nowMin, isToday, onTapTrack, onTapEvent }) => {
   const isPicking = selection && selection.roomId === room.id;
@@ -160,6 +173,7 @@ const MobileMiniBar = ({ room, selection, nowMin, isToday, onTapTrack, onTapEven
   return (
     <div className="m-mini">
       <div className="m-mini-bar" onClick={(e) => onTapTrack(room, e)}>
+        <span className="sr-only">{room.name} 占用时间条，轻点选择空闲时段</span>
         <div className="m-mini-track">
           {pastEnd > window.TL.LIST_START && (
             <span
@@ -324,6 +338,7 @@ const MobileSelectionBar = ({ room, selection, dateText, onCancel, onBook, onQui
               type="button"
               key={min}
               className={`m-chip ${selection.end - selection.start === min ? "active" : ""}`}
+              aria-pressed={selection.end - selection.start === min}
               onClick={() => onQuickDuration(min)}
             >
               {min >= 60 ? `${min / 60}小时` : `${min}分钟`}
@@ -342,13 +357,14 @@ const MobileSelectionBar = ({ room, selection, dateText, onCancel, onBook, onQui
 
 const MobileOccupancySheet = ({ payload, onClose }) => {
   const { room, event } = payload;
+  window.useOverlayClose(onClose);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="bottom-sheet" onClick={e => e.stopPropagation()}>
+      <div className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="occupancy-title" onClick={e => e.stopPropagation()}>
         <div className="sheet-drag-handle" />
         <div className="sheet-header">
-          <span className="sheet-title">该时段已被预定</span>
+          <span id="occupancy-title" className="sheet-title">该时段已被预定</span>
           <button type="button" className="navbar-action" onClick={onClose}>关闭</button>
         </div>
         <div className="sheet-body">
@@ -377,11 +393,12 @@ const MobileOccupancySheet = ({ payload, onClose }) => {
 };
 
 const MobileConfirmSheet = ({ payload, onCancel }) => {
+  window.useOverlayClose(onCancel);
   return (
     <div className="modal-overlay" onClick={onCancel}>
-      <div className="m-action-sheet" onClick={e => e.stopPropagation()}>
+      <div className="m-action-sheet" role="dialog" aria-modal="true" aria-labelledby="confirm-sheet-title" onClick={e => e.stopPropagation()}>
         <div className="m-action-desc">
-          <strong>{payload.title}</strong>
+          <strong id="confirm-sheet-title">{payload.title}</strong>
           <span>{payload.message}</span>
         </div>
         <button type="button" className="m-action-btn danger" onClick={payload.onConfirm}>
