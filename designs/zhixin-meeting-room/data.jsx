@@ -4,10 +4,10 @@ window.INITIAL_ROOMS = [
     id: "room-1",
     name: "1号会议室",
     groupName: "高管会议区",
-    buildingName: "奥城大厦",
+    buildingName: "奥城",
     floorName: "7层",
     capacity: 10,
-    facilities: ["电视", "投影仪", "白板"],
+    facilities: ["电视", "投影", "白板"],
     locationNote: "7层电梯口右转第一间",
     openStart: "07:00",
     openEnd: "23:00",
@@ -23,10 +23,10 @@ window.INITIAL_ROOMS = [
     id: "room-2",
     name: "2号会议室",
     groupName: null,
-    buildingName: "奥城大厦",
+    buildingName: "奥城",
     floorName: "7层",
     capacity: 6,
-    facilities: ["电视", "电话"],
+    facilities: ["电视"],
     locationNote: null,
     openStart: "08:30",
     openEnd: "21:00",
@@ -42,10 +42,10 @@ window.INITIAL_ROOMS = [
     id: "room-3",
     name: "3号多功能路演厅",
     groupName: "公共空间",
-    buildingName: "奥城大厦",
+    buildingName: "奥城",
     floorName: "8层",
     capacity: 50,
-    facilities: ["电视", "投影仪", "白板", "视频会议"],
+    facilities: ["电视", "投影", "白板"],
     locationNote: "配备双屏专业音响",
     openStart: "09:00",
     openEnd: "22:00",
@@ -61,7 +61,7 @@ window.INITIAL_ROOMS = [
     id: "room-4",
     name: "4号头脑风暴室",
     groupName: "研发区",
-    buildingName: "科技园区B座",
+    buildingName: "生态城",
     floorName: "3层",
     capacity: 8,
     facilities: ["白板"],
@@ -80,10 +80,10 @@ window.INITIAL_ROOMS = [
     id: "room-5",
     name: "5号VIP接待室",
     groupName: "商务接待",
-    buildingName: "科技园区B座",
+    buildingName: "生态城",
     floorName: "5层",
     capacity: 12,
-    facilities: ["电视", "电话", "视频会议"],
+    facilities: ["电视"],
     locationNote: "VIP专属，需提前申请门禁",
     openStart: "09:00",
     openEnd: "18:00",
@@ -97,7 +97,35 @@ window.INITIAL_ROOMS = [
   }
 ];
 
-window.FACILITY_OPTIONS = ["电视", "电话", "投影仪", "白板", "视频会议"];
+window.DICT_TYPES = [
+  { id: "building", label: "建筑" },
+  { id: "facility", label: "设施" }
+];
+
+window.INITIAL_DICTS = [
+  { id: "dict-b-1", type: "building", name: "奥城", sort: 1, enabled: true },
+  { id: "dict-b-2", type: "building", name: "生态城", sort: 2, enabled: true },
+  { id: "dict-f-1", type: "facility", name: "电视", sort: 1, enabled: true },
+  { id: "dict-f-2", type: "facility", name: "白板", sort: 2, enabled: true },
+  { id: "dict-f-3", type: "facility", name: "投影", sort: 3, enabled: true }
+];
+
+window.dictItems = (dicts, type, enabledOnly = true) =>
+  (dicts || [])
+    .filter(d => d.type === type && (!enabledOnly || d.enabled))
+    .sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, "zh-CN"));
+
+window.dictNames = (dicts, type, enabledOnly = true) =>
+  window.dictItems(dicts, type, enabledOnly).map(d => d.name);
+
+window.formatFacilities = (facilities, dicts) => {
+  const list = facilities || [];
+  if (!list.length) return "—";
+  const order = window.dictNames(dicts, "facility", false);
+  const named = order.filter(f => list.includes(f));
+  const extra = list.filter(f => !order.includes(f));
+  return [...named, ...extra].join(" / ");
+};
 
 window.BOOK_AHEAD_OPTIONS = [
   { value: 7, label: "7 天" },

@@ -1,6 +1,6 @@
 // Room Form Page Component (New / Edit)
 
-const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast }) => {
+const RoomFormPage = ({ initialRoom, existingRooms, dicts, onSave, onCancel, showToast }) => {
   const isEdit = Boolean(initialRoom && initialRoom.id);
 
   // Form State
@@ -52,13 +52,19 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
   const [isSaving, setIsSaving] = React.useState(false);
 
   // Derive existing buildings from rooms for dropdown suggestions
-  const existingBuildings = React.useMemo(() => {
-    const set = new Set();
-    existingRooms.forEach(r => {
-      if (r.buildingName) set.add(r.buildingName);
-    });
-    return Array.from(set);
-  }, [existingRooms]);
+  const dictBuildings = React.useMemo(() => {
+    const names = window.dictNames(dicts, "building");
+    if (formData.buildingName && !names.includes(formData.buildingName)) {
+      return [formData.buildingName, ...names];
+    }
+    return names;
+  }, [dicts, formData.buildingName]);
+
+  const facilityOptions = React.useMemo(() => {
+    const names = window.dictNames(dicts, "facility");
+    const extra = (formData.facilities || []).filter(f => !names.includes(f));
+    return [...names, ...extra];
+  }, [dicts, formData.facilities]);
 
   // Derive existing floors for current building
   const existingFloors = React.useMemo(() => {
@@ -97,8 +103,8 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
       const nextFacilities = exists
         ? prev.facilities.filter(f => f !== item)
         : [...prev.facilities, item];
-      // Keep sorted per FACILITY_OPTIONS
-      const sorted = window.FACILITY_OPTIONS.filter(f => nextFacilities.includes(f));
+      // 按字典表顺序排列
+      const sorted = facilityOptions.filter(f => nextFacilities.includes(f));
       return { ...prev, facilities: sorted };
     });
   };
@@ -252,12 +258,12 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                     type="text"
                     list="building-list"
                     className={`input ${errors.buildingName ? 'error' : ''}`}
-                    placeholder="选择或输入建筑"
+                    placeholder="选择或输入建筑（选项来自字典表）"
                     value={formData.buildingName}
                     onChange={e => handleFieldChange("buildingName", e.target.value)}
                   />
                   <datalist id="building-list">
-                    {existingBuildings.map(b => (
+                    {dictBuildings.map(b => (
                       <option key={b} value={b} />
                     ))}
                   </datalist>
@@ -320,16 +326,20 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
           </h2>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 20, padding: "4px 0" }}>
-            {window.FACILITY_OPTIONS.map(item => (
-              <label key={item} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.facilities.includes(item)}
-                  onChange={() => handleFacilityToggle(item)}
-                />
-                {item}
-              </label>
-            ))}
+            {facilityOptions.length === 0 ? (
+              <span style={{ fontSize: 13, color: "var(--color-mute)" }}>请先在「字典表」维护设施选项</span>
+            ) : (
+              facilityOptions.map(item => (
+                <label key={item} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={formData.facilities.includes(item)}
+                    onChange={() => handleFacilityToggle(item)}
+                  />
+                  {item}
+                </label>
+              ))
+            )}
           </div>
         </div>
 

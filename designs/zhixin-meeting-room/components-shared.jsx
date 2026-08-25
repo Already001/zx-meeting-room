@@ -1,61 +1,28 @@
 // UI Shell & Shared Components
 
-const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => {
+const AppShell = ({ activeNav = "rooms", onNavigate, children, userName = "管理员" }) => {
+  const navItems = [
+    { id: "rooms", label: "会议室", icon: <window.IconMeetingRoom /> },
+    { id: "dicts", label: "字典表", icon: <window.IconDict /> }
+  ];
+
   return (
     <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden" }}>
-      {/* 60px Left Sidenav */}
-      <aside style={{
-        width: "var(--sidenav-width)",
-        backgroundColor: "var(--color-canvas-soft)",
-        borderRight: "1px solid var(--color-hairline)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "12px 0",
-        flexShrink: 0
-      }}>
-        {/* App Icon */}
-        <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          backgroundColor: "var(--color-primary)",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 20
-        }}>
+      <aside className="admin-sidenav">
+        <div className="admin-sidenav-logo">
           <window.IconAppLogo />
         </div>
-
-        {/* Nav item */}
-        <div style={{
-          width: "100%",
-          height: 44,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 2,
-          position: "relative",
-          backgroundColor: activeNav === "rooms" ? "var(--color-primary-bg)" : "transparent",
-          color: activeNav === "rooms" ? "var(--color-primary)" : "var(--color-body)",
-          cursor: "pointer"
-        }}>
-          {activeNav === "rooms" && (
-            <div style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: "var(--menu-active-bar)",
-              backgroundColor: "var(--color-primary)"
-            }} />
-          )}
-          <window.IconMeetingRoom />
-          <span style={{ fontSize: 10, lineHeight: 1 }}>会议室</span>
-        </div>
+        {navItems.map(item => (
+          <button
+            type="button"
+            key={item.id}
+            className={`admin-nav-item ${activeNav === item.id ? "active" : ""}`}
+            onClick={() => onNavigate && onNavigate(item.id)}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        ))}
       </aside>
 
       {/* Main Area */}

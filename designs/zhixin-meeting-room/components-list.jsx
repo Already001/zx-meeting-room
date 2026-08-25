@@ -1,6 +1,6 @@
 // Room List Page Component
 
-const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) => {
+const RoomListPage = ({ rooms, dicts, onNavigateNew, onNavigateEdit, onToggleEnable }) => {
   const [keyword, setKeyword] = React.useState("");
   const [debouncedKeyword, setDebouncedKeyword] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all"); // all | true | false
@@ -20,12 +20,12 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
 
   // Derive unique buildings from current room data
   const availableBuildings = React.useMemo(() => {
-    const set = new Set();
+    const set = new Set(window.dictNames(dicts, "building"));
     rooms.forEach(r => {
       if (r.buildingName) set.add(r.buildingName);
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "zh-CN"));
-  }, [rooms]);
+    return Array.from(set);
+  }, [rooms, dicts]);
 
   // Derive available floors based on building filter
   const availableFloors = React.useMemo(() => {
@@ -197,9 +197,7 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
                   <td style={{ padding: "14px 16px", color: "var(--color-body)" }}>{room.floorName}</td>
                   <td style={{ padding: "14px 16px", color: "var(--color-body)" }}>{room.capacity}人</td>
                   <td style={{ padding: "14px 16px", color: "var(--color-body)", fontSize: 13 }}>
-                    {room.facilities && room.facilities.length > 0
-                      ? window.FACILITY_OPTIONS.filter(f => room.facilities.includes(f)).join(" / ")
-                      : "—"}
+                    {window.formatFacilities(room.facilities, dicts)}
                   </td>
                   <td style={{ padding: "14px 16px", color: "var(--color-body)", fontSize: 13 }}>
                     {room.openStart} - {room.openEnd}
