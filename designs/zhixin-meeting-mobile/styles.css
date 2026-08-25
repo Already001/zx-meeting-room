@@ -1101,6 +1101,8 @@ html, body {
 .tl-axis-now {
   color: #FF4D4F;
   font-weight: 600;
+  background: #FFFFFF;
+  padding: 0 3px;
   z-index: 2;
 }
 

@@ -87,12 +87,12 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
         justifyContent: "space-between"
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--color-ink)" }}>会议室管理</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--color-mute)" }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, lineHeight: "32px", color: "var(--color-ink)" }}>会议室管理</h1>
+          <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "18px", color: "var(--color-mute)" }}>
             维护企业会议室主数据、位置、设施与预定规则
           </p>
         </div>
-        <button className="btn btn-primary" onClick={onNavigateNew}>
+          <button type="button" className="btn btn-primary" onClick={onNavigateNew}>
           <window.IconPlus /> 新建会议室
         </button>
       </div>
@@ -107,13 +107,16 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
         }}>
           {/* Keyword Search */}
           <div style={{ position: "relative" }}>
+            <label className="sr-only" htmlFor="room-search">搜索会议室</label>
             <input
-              type="text"
+              id="room-search"
+              type="search"
               className="input"
               placeholder="搜索会议室"
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
               style={{ paddingLeft: 30 }}
+              autoComplete="off"
             />
             <div style={{ position: "absolute", left: 10, top: 9, color: "var(--color-mute)", pointerEvents: "none" }}>
               <window.IconSearch />
@@ -121,7 +124,9 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
           </div>
 
           {/* Status Filter */}
+          <label className="sr-only" htmlFor="room-status-filter">状态</label>
           <select
+            id="room-status-filter"
             className="select"
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
@@ -132,7 +137,9 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
           </select>
 
           {/* Building Filter */}
+          <label className="sr-only" htmlFor="room-building-filter">建筑</label>
           <select
+            id="room-building-filter"
             className="select"
             value={buildingFilter}
             onChange={e => { setBuildingFilter(e.target.value); setPage(1); }}
@@ -144,7 +151,9 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
           </select>
 
           {/* Floor Filter */}
+          <label className="sr-only" htmlFor="room-floor-filter">楼层</label>
           <select
+            id="room-floor-filter"
             className="select"
             value={floorFilter}
             onChange={e => { setFloorFilter(e.target.value); setPage(1); }}
@@ -157,7 +166,7 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
 
           {/* Reset button */}
           <div style={{ justifySelf: "end" }}>
-            <button className="btn btn-secondary" onClick={handleReset}>
+            <button type="button" className="btn btn-secondary" onClick={handleReset}>
               重置
             </button>
           </div>
@@ -166,9 +175,10 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
 
       {/* Table Card */}
       <div className="card-content" style={{ padding: 0, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+        <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", minWidth: 720 }}>
           <thead>
-            <tr style={{ backgroundColor: "var(--color-canvas-soft)", borderBottom: "1px solid var(--color-hairline)", color: "var(--color-body)", fontSize: 13 }}>
+            <tr style={{ backgroundColor: "var(--color-canvas-soft)", borderBottom: "1px solid var(--color-divider)", color: "var(--color-body)", fontSize: 12, lineHeight: "18px" }}>
               <th style={{ padding: "12px 16px", fontWeight: 500 }}>名称</th>
               <th style={{ padding: "12px 16px", fontWeight: 500 }}>建筑</th>
               <th style={{ padding: "12px 16px", fontWeight: 500 }}>楼层</th>
@@ -185,40 +195,42 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
                 <tr key={room.id} style={{ borderBottom: "1px solid var(--color-divider)", transition: "background 0.15s" }}
                     onMouseEnter={e => e.currentTarget.style.background = "var(--color-canvas-soft)"}
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <td style={{ padding: "14px 16px", fontWeight: 500, color: "var(--color-ink)" }}>
+                  <td style={{ padding: "12px 16px", fontWeight: 500, color: "var(--color-ink)" }}>
                     <div>{room.name}</div>
                     {room.groupName && (
-                      <div style={{ fontSize: 12, color: "var(--color-mute)", marginTop: 2 }}>
+                      <div style={{ fontSize: 12, lineHeight: "18px", color: "var(--color-mute)", marginTop: 2 }}>
                         分组：{room.groupName}
                       </div>
                     )}
                   </td>
-                  <td style={{ padding: "14px 16px", color: "var(--color-body)" }}>{room.buildingName}</td>
-                  <td style={{ padding: "14px 16px", color: "var(--color-body)" }}>{room.floorName}</td>
-                  <td style={{ padding: "14px 16px", color: "var(--color-body)" }}>{room.capacity}人</td>
-                  <td style={{ padding: "14px 16px", color: "var(--color-body)", fontSize: 13 }}>
+                  <td style={{ padding: "12px 16px", color: "var(--color-body)" }}>{room.buildingName}</td>
+                  <td style={{ padding: "12px 16px", color: "var(--color-body)" }}>{room.floorName}</td>
+                  <td style={{ padding: "12px 16px", color: "var(--color-body)", fontVariantNumeric: "tabular-nums" }}>{room.capacity}人</td>
+                  <td style={{ padding: "12px 16px", color: "var(--color-body)", fontSize: 13, lineHeight: "18px" }}>
                     {room.facilities && room.facilities.length > 0
                       ? window.FACILITY_OPTIONS.filter(f => room.facilities.includes(f)).join(" / ")
                       : "—"}
                   </td>
-                  <td style={{ padding: "14px 16px", color: "var(--color-body)", fontSize: 13 }}>
+                  <td style={{ padding: "12px 16px", color: "var(--color-body)", fontSize: 13, lineHeight: "18px", fontVariantNumeric: "tabular-nums" }}>
                     {room.openStart} - {room.openEnd}
                   </td>
-                  <td style={{ padding: "14px 16px" }}>
+                  <td style={{ padding: "12px 16px" }}>
                     <span className={`status-tag ${room.enabled ? 'status-tag-success' : 'status-tag-disabled'}`}>
                       {room.enabled ? "启用中" : "已停用"}
                     </span>
                   </td>
-                  <td style={{ padding: "14px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
                     <button
+                      type="button"
                       className="btn-text"
-                      style={{ marginRight: 12 }}
+                      style={{ marginRight: 8 }}
                       onClick={() => onNavigateEdit(room.id)}
                     >
                       编辑
                     </button>
                     {room.enabled ? (
                       <button
+                        type="button"
                         className="btn-text-danger"
                         onClick={() => onToggleEnable(room, false)}
                       >
@@ -226,6 +238,7 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
                       </button>
                     ) : (
                       <button
+                        type="button"
                         className="btn-text"
                         onClick={() => onToggleEnable(room, true)}
                       >
@@ -240,11 +253,15 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
                 <td colSpan={8} style={{ padding: "60px 20px", textAlign: "center" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
                     <window.IconEmpty />
-                    <span style={{ fontSize: 14, color: "var(--color-mute)" }}>
+                    <span style={{ fontSize: 14, lineHeight: "20px", color: "var(--color-mute)" }}>
                       {hasFilter ? "没有符合条件的会议室" : "暂无会议室"}
                     </span>
-                    {!hasFilter && (
-                      <button className="btn btn-primary" onClick={onNavigateNew} style={{ marginTop: 4 }}>
+                    {hasFilter ? (
+                      <button type="button" className="btn btn-secondary" onClick={handleReset} style={{ marginTop: 4 }}>
+                        重置筛选
+                      </button>
+                    ) : (
+                      <button type="button" className="btn btn-primary" onClick={onNavigateNew} style={{ marginTop: 4 }}>
                         <window.IconPlus /> 新建会议室
                       </button>
                     )}
@@ -254,34 +271,36 @@ const RoomListPage = ({ rooms, onNavigateNew, onNavigateEdit, onToggleEnable }) 
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination bar */}
         {total > 0 && (
           <div style={{
             padding: "12px 20px",
-            borderTop: "1px solid var(--color-hairline)",
+            borderTop: "1px solid var(--color-divider)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             fontSize: 13,
+            lineHeight: "18px",
             color: "var(--color-body)"
           }}>
             <span>共 {total} 条记录</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button
+                type="button"
                 className="btn btn-secondary"
-                style={{ height: 26, padding: "0 8px", fontSize: 12 }}
                 disabled={page <= 1}
                 onClick={() => setPage(p => p - 1)}
               >
                 上一页
               </button>
-              <span style={{ padding: "0 8px" }}>
+              <span style={{ padding: "0 8px", fontVariantNumeric: "tabular-nums" }}>
                 {page} / {Math.max(1, Math.ceil(total / pageSize))}
               </span>
               <button
+                type="button"
                 className="btn btn-secondary"
-                style={{ height: 26, padding: "0 8px", fontSize: 12 }}
                 disabled={page >= Math.ceil(total / pageSize)}
                 onClick={() => setPage(p => p + 1)}
               >

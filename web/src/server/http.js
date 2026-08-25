@@ -61,8 +61,13 @@ export const insResponseArgs = [
   (response) => {
     // 刷新接口自身返回的 O_T_00x 不能再走下面的排队/重试分支，否则会自等待
     // （refreshToken() 复用同一个 http 实例，若不排除会在这里递归进队列）
-    const isRefreshCall = (response.config.url || "").indexOf("/refresh/token") !== -1;
-    if (response.status === 200 && !isRefreshCall && errorMsg.includes(response.data.code)) {
+    const isRefreshCall =
+      (response.config.url || "").indexOf("/refresh/token") !== -1;
+    if (
+      response.status === 200 &&
+      !isRefreshCall &&
+      errorMsg.includes(response.data.code)
+    ) {
       if (response.data.code === "O_T_003") {
         if (!errorFlag) {
           errorFlag = true;
@@ -76,29 +81,31 @@ export const insResponseArgs = [
       if (!IsRefrshToken) {
         IsRefrshToken = true;
         currentResponse = response;
-        return refreshToken()
-          // 无论刷新成功/失败/返回假值都要复位，否则此后所有 O_T_001/002
-          // 会一直走下面的排队分支，定时器与 pending Promise 永久堆积
-          .finally(() => {
-            IsRefrshToken = false;
-          })
-          .then((res) => {
-            if (res) {
-              const option = { ...currentResponse.config };
-              if (typeof currentResponse.config.data === "string") {
-                try {
-                  option.data = JSON.parse(currentResponse.config.data);
-                } catch (error) {
-                  option.data = currentResponse.config.data;
+        return (
+          refreshToken()
+            // 无论刷新成功/失败/返回假值都要复位，否则此后所有 O_T_001/002
+            // 会一直走下面的排队分支，定时器与 pending Promise 永久堆积
+            .finally(() => {
+              IsRefrshToken = false;
+            })
+            .then((res) => {
+              if (res) {
+                const option = { ...currentResponse.config };
+                if (typeof currentResponse.config.data === "string") {
+                  try {
+                    option.data = JSON.parse(currentResponse.config.data);
+                  } catch (error) {
+                    option.data = currentResponse.config.data;
+                  }
                 }
+                return http(option);
               }
-              return http(option);
-            }
-          })
-          .catch((error) => {
-            showToastError(response.data.msg || "登录已过期，请重新登录");
-            return Promise.reject(error);
-          });
+            })
+            .catch((error) => {
+              showToastError(response.data.msg || "登录已过期，请重新登录");
+              return Promise.reject(error);
+            })
+        );
       }
       return new Promise((resolve, reject) => {
         const start = Date.now();

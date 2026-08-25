@@ -64,7 +64,10 @@ export function autoExportAssets(options = {}) {
             if (typeof customResult === "string") {
               const match = customResult.match(/import\s+(\w+)\s+from/);
               if (match) {
-                files.push({ importName: match[1], customImport: customResult });
+                files.push({
+                  importName: match[1],
+                  customImport: customResult
+                });
                 return;
               }
             }

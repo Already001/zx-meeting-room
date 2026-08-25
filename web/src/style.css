@@ -1,3 +1,5 @@
+@import "./styles/tokens.css";
+
 /* 全局基础样式：三个入口共用 */
 html,
 body,
@@ -6,10 +8,321 @@ body,
   margin: 0;
 }
 
+html {
+  color-scheme: light;
+}
+
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
-    "Helvetica Neue", Arial, sans-serif;
-  color: #1f2329;
-  background: #f4f6f8;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  color: var(--color-ink);
+  background: var(--color-canvas-soft);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+a:hover {
+  color: var(--color-primary-pressed);
+}
+
+button,
+[role="button"],
+.cursor-pointer {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only:focus,
+.sr-only:focus-visible {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: var(--z-toast);
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 8px 12px;
+  overflow: visible;
+  clip: auto;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Element Plus：对齐 DESIGN.md，覆盖默认 #409EFF ─── */
+:root {
+  --el-font-family: var(--font-family);
+  --el-font-size-base: 14px;
+  --el-component-size: var(--control-height);
+  --el-border-radius-base: var(--radius-sm);
+  --el-border-radius-small: var(--radius-xs);
+  --el-border-radius-round: var(--radius-pill);
+
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-light-3: #78a5ff;
+  --el-color-primary-light-5: #9ebeff;
+  --el-color-primary-light-7: #c5d8ff;
+  --el-color-primary-light-8: var(--color-primary-border);
+  --el-color-primary-light-9: var(--color-primary-bg);
+  --el-color-primary-dark-2: var(--color-primary-pressed);
+
+  --el-color-success: var(--color-success);
+  --el-color-warning: var(--color-warning);
+  --el-color-danger: var(--color-danger);
+  --el-color-error: var(--color-danger);
+
+  --el-text-color-primary: var(--color-ink);
+  --el-text-color-regular: var(--color-body);
+  --el-text-color-secondary: var(--color-mute);
+  --el-text-color-placeholder: var(--color-mute);
+  --el-text-color-disabled: var(--color-disabled);
+
+  --el-border-color: var(--color-hairline);
+  --el-border-color-light: var(--color-divider);
+  --el-border-color-lighter: var(--color-divider);
+  --el-fill-color-blank: var(--color-canvas);
+  --el-fill-color-light: var(--color-canvas-soft);
+  --el-bg-color: var(--color-canvas);
+  --el-bg-color-page: var(--color-canvas-soft);
+  --el-disabled-bg-color: var(--color-canvas-soft);
+  --el-disabled-text-color: var(--color-disabled);
+
+  --el-overlay-color-lighter: var(--scrim);
+  --el-dialog-border-radius: var(--radius-lg);
+  --el-box-shadow: var(--shadow-heavy);
+  --el-box-shadow-light: var(--shadow-light);
+}
+
+.el-button {
+  height: var(--control-height);
+  padding: 0 var(--spacing-xl);
+  font-size: 14px;
+  font-weight: 400;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.el-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.el-button--primary:active:not(:disabled) {
+  background-color: var(--color-primary-pressed);
+  border-color: var(--color-primary-pressed);
+}
+
+.el-button--danger:active:not(:disabled) {
+  background-color: var(--color-danger-pressed);
+  border-color: var(--color-danger-pressed);
+}
+
+.el-button.is-disabled,
+.el-button.is-disabled:hover {
+  color: var(--color-disabled) !important;
+  background-color: var(--color-canvas-soft) !important;
+  border-color: var(--color-hairline) !important;
+}
+
+.el-dialog,
+.el-dialog.is-align-center {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-heavy);
+  padding: 0;
+}
+
+.el-dialog__header {
+  padding: var(--spacing-xl) var(--spacing-2xl);
+  margin-right: 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.el-dialog .el-dialog__title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  color: var(--color-ink);
+}
+
+.el-dialog__body {
+  padding: var(--spacing-2xl);
+  color: var(--color-body);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.el-dialog__footer {
+  padding: var(--spacing-lg) var(--spacing-2xl);
+  border-top: 1px solid var(--color-divider);
+  background: var(--color-canvas-soft);
+}
+
+.el-overlay {
+  background-color: var(--scrim) !important;
+}
+
+.el-message-box {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-heavy);
+  padding: 0;
+  border: none;
+}
+
+.el-message-box__header {
+  padding: var(--spacing-xl) var(--spacing-2xl);
+}
+
+.el-message-box__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.el-message-box__content {
+  padding: 0 var(--spacing-2xl) var(--spacing-2xl);
+  color: var(--color-body);
+}
+
+.el-message-box__btns {
+  padding: var(--spacing-lg) var(--spacing-2xl);
+  background: var(--color-canvas-soft);
+}
+
+.el-message {
+  min-width: 240px;
+  padding: 10px 16px;
+  background: var(--color-canvas) !important;
+  border: none !important;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-light);
+  border-left: 3px solid var(--color-primary);
+}
+
+.el-message--success {
+  border-left-color: var(--color-success);
+}
+
+.el-message--error {
+  border-left-color: var(--color-danger);
+}
+
+.el-message--warning {
+  border-left-color: var(--color-warning);
+}
+
+.el-input__wrapper {
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px var(--color-hairline) inset;
+}
+
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--color-control) inset;
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow:
+    0 0 0 1px var(--color-primary) inset,
+    0 0 0 2px var(--color-primary-bg) !important;
+}
+
+.el-input.is-disabled .el-input__wrapper {
+  background-color: var(--color-canvas-soft);
+  box-shadow: 0 0 0 1px var(--color-hairline) inset;
+}
+
+.el-table th.el-table__cell {
+  background: var(--color-canvas-soft);
+  color: var(--color-body);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.el-table td.el-table__cell {
+  font-size: 14px;
+  line-height: 20px;
+  border-bottom-color: var(--color-divider);
+}
+
+/* ─── Vant：对齐主色 / 圆角 / 遮罩 ─── */
+:root {
+  --van-font-family: var(--font-family);
+  --van-base-font: var(--font-family);
+  --van-blue: var(--color-primary);
+  --van-primary-color: var(--color-primary);
+  --van-danger-color: var(--color-danger);
+  --van-success-color: var(--color-success);
+  --van-warning-color: var(--color-warning);
+  --van-red: var(--color-danger);
+  --van-orange: var(--color-warning);
+  --van-text-color: var(--color-ink);
+  --van-text-color-2: var(--color-body);
+  --van-text-color-3: var(--color-mute);
+  --van-border-color: var(--color-hairline);
+  --van-background: var(--color-canvas-soft);
+  --van-background-2: var(--color-canvas);
+  --van-radius-sm: var(--radius-sm);
+  --van-radius-md: var(--radius-md);
+  --van-radius-lg: var(--radius-lg);
+  --van-button-radius: var(--radius-sm);
+  --van-dialog-radius: var(--radius-lg);
+  --van-popup-round-radius: var(--radius-lg);
+  --van-overlay-background: var(--scrim);
+}
+
+.van-button {
+  font-weight: 400;
+}
+
+.van-button--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.van-popup--round {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }

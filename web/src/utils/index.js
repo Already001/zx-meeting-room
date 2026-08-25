@@ -20,8 +20,7 @@ export const getCorpId = () => sessionStorage.getItem("meetingCorpId");
 
 /** 解析 URL 查询参数（用 URLSearchParams 按规范处理 + 与 %XX 转义） */
 export const getUrlParams = (data) => {
-  const qs =
-    typeof data === "string" ? data.split("?")[1] || "" : data.search;
+  const qs = typeof data === "string" ? data.split("?")[1] || "" : data.search;
   const sp = new URLSearchParams(qs);
   const result = new Map();
   for (const [k] of sp) {
@@ -44,7 +43,10 @@ export const bootstrapAuthFromUrl = () => {
   const clientType = params.get("clientType");
 
   if (token) {
-    setToken({ access_token: token, refresh_token: params.get("refreshToken") || "" });
+    setToken({
+      access_token: token,
+      refresh_token: params.get("refreshToken") || ""
+    });
   }
   if (corpId) {
     sessionStorage.setItem("meetingCorpId", corpId);
@@ -56,7 +58,9 @@ export const bootstrapAuthFromUrl = () => {
   // 落盘之后再清理地址栏里的敏感参数，避免明文 token 残留（Referer/日志泄露）
   if (token || corpId || clientType) {
     const u = new URL(location.href);
-    ["token", "refreshToken", "corpId", "clientType"].forEach((k) => u.searchParams.delete(k));
+    ["token", "refreshToken", "corpId", "clientType"].forEach((k) =>
+      u.searchParams.delete(k)
+    );
     history.replaceState(null, "", u.toString());
   }
 

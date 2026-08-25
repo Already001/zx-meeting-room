@@ -91,6 +91,59 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
     }
   };
 
+  const validateField = (key, data = formData) => {
+    const errs = {};
+    const trimmedName = (data.name || "").trim();
+    if (key === "name") {
+      if (!trimmedName) {
+        errs.name = "请输入名称";
+      } else if (trimmedName.length > 30) {
+        errs.name = "名称不超过 30 个字";
+      } else if (data.enabled) {
+        const duplicate = existingRooms.find(r => {
+          if (isEdit && r.id === initialRoom.id) return false;
+          return r.enabled && r.name === trimmedName;
+        });
+        if (duplicate) {
+          errs.name = isEdit ? "已有同名启用中的会议室，请修改名称" : "该名称已被使用";
+        }
+      }
+    }
+    if (key === "buildingName" && (!data.buildingName || !data.buildingName.trim())) {
+      errs.buildingName = "请选择或输入建筑";
+    }
+    if (key === "floorName" && (!data.floorName || !data.floorName.trim())) {
+      errs.floorName = "请选择或输入楼层";
+    }
+    if (key === "capacity") {
+      const cap = Number(data.capacity);
+      if (!data.capacity || isNaN(cap) || cap < 1 || cap > 999 || !Number.isInteger(cap)) {
+        errs.capacity = "请输入容纳人数（1-999整数）";
+      }
+    }
+    if (key === "openHours") {
+      if (!data.openStart || !data.openEnd) {
+        errs.openHours = "请选择开放时间";
+      } else if (data.openEnd <= data.openStart) {
+        errs.openHours = "结束时间必须晚于开始时间";
+      }
+    }
+    setErrors(prev => {
+      const next = { ...prev };
+      ["name", "buildingName", "floorName", "capacity", "openHours"].forEach((field) => {
+        if (field === key) {
+          if (errs[field]) next[field] = errs[field];
+          else delete next[field];
+        }
+      });
+      return next;
+    });
+  };
+
+  const handleFieldBlur = (key) => {
+    validateField(key);
+  };
+
   const handleFacilityToggle = (item) => {
     setFormData(prev => {
       const exists = prev.facilities.includes(item);
@@ -152,6 +205,10 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
 
     if (!validate()) {
       showToast("请检查表单必填项", "error");
+      requestAnimationFrame(() => {
+        const firstInvalid = document.querySelector("form .input.error, form select.error");
+        if (firstInvalid) firstInvalid.focus();
+      });
       return;
     }
 
@@ -185,13 +242,14 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
       {/* Header Bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
+          type="button"
           className="btn btn-secondary"
           onClick={() => onCancel(isDirty)}
           style={{ padding: "0 10px" }}
         >
           <window.IconBack /> 返回
         </button>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--color-ink)" }}>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, lineHeight: "32px", color: "var(--color-ink)" }}>
           {isEdit ? "编辑会议室" : "新建会议室"}
         </h1>
       </div>
@@ -199,38 +257,43 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Section 1: 基本信息 */}
         <div className="card-content">
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "var(--color-ink)", borderBottom: "1px solid var(--color-hairline)", paddingBottom: 10 }}>
+          <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
             基本信息
           </h2>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* 会议室名称 */}
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>会议室名称
+              <label htmlFor="room-name" style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>会议室名称
               </label>
               <div>
                 <input
+                  id="room-name"
                   type="text"
                   maxLength={30}
                   className={`input ${errors.name ? 'error' : ''}`}
                   placeholder="例如：1号会议室（1-30字）"
                   value={formData.name}
+                  aria-invalid={Boolean(errors.name)}
+                  aria-describedby={errors.name ? "room-name-error" : undefined}
                   onChange={e => handleFieldChange("name", e.target.value)}
+                  onBlur={() => handleFieldBlur("name")}
                 />
                 {errors.name && (
-                  <div style={{ color: "var(--color-danger)", fontSize: 12, marginTop: 4 }}>{errors.name}</div>
+                  <div id="room-name-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginTop: 4 }} role="alert">{errors.name}</div>
                 )}
               </div>
             </div>
 
             {/* 所属分组 */}
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label style={{ fontSize: 14, color: "var(--color-body)", marginTop: 6 }}>
+              <label htmlFor="room-group" style={{ fontSize: 14, color: "var(--color-body)", marginTop: 6 }}>
                 所属分组
               </label>
               <div>
                 <input
+                  id="room-group"
                   type="text"
                   maxLength={20}
                   className="input"
@@ -248,13 +311,18 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
+                  <label className="sr-only" htmlFor="room-building">建筑</label>
                   <input
+                    id="room-building"
                     type="text"
                     list="building-list"
                     className={`input ${errors.buildingName ? 'error' : ''}`}
                     placeholder="选择或输入建筑"
                     value={formData.buildingName}
+                    aria-invalid={Boolean(errors.buildingName)}
+                    aria-describedby={errors.buildingName ? "room-building-error" : undefined}
                     onChange={e => handleFieldChange("buildingName", e.target.value)}
+                    onBlur={() => handleFieldBlur("buildingName")}
                   />
                   <datalist id="building-list">
                     {existingBuildings.map(b => (
@@ -262,19 +330,24 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                     ))}
                   </datalist>
                   {errors.buildingName && (
-                    <div style={{ color: "var(--color-danger)", fontSize: 12, marginTop: 4 }}>{errors.buildingName}</div>
+                    <div id="room-building-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginTop: 4 }} role="alert">{errors.buildingName}</div>
                   )}
                 </div>
 
                 <div>
+                  <label className="sr-only" htmlFor="room-floor">楼层</label>
                   <input
+                    id="room-floor"
                     type="text"
                     list="floor-list"
                     disabled={!formData.buildingName}
                     className={`input ${errors.floorName ? 'error' : ''}`}
                     placeholder={formData.buildingName ? "选择或输入楼层" : "请先选择/输入建筑"}
                     value={formData.floorName}
+                    aria-invalid={Boolean(errors.floorName)}
+                    aria-describedby={errors.floorName ? "room-floor-error" : undefined}
                     onChange={e => handleFieldChange("floorName", e.target.value)}
+                    onBlur={() => handleFieldBlur("floorName")}
                   />
                   <datalist id="floor-list">
                     {existingFloors.map(f => (
@@ -282,7 +355,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                     ))}
                   </datalist>
                   {errors.floorName && (
-                    <div style={{ color: "var(--color-danger)", fontSize: 12, marginTop: 4 }}>{errors.floorName}</div>
+                    <div id="room-floor-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginTop: 4 }} role="alert">{errors.floorName}</div>
                   )}
                 </div>
               </div>
@@ -290,11 +363,12 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
 
             {/* 容纳人数 */}
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>容纳人数
+              <label htmlFor="room-capacity" style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>容纳人数
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <input
+                  id="room-capacity"
                   type="number"
                   min={1}
                   max={999}
@@ -302,11 +376,14 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
                   style={{ width: 140 }}
                   placeholder="1-999"
                   value={formData.capacity}
+                  aria-invalid={Boolean(errors.capacity)}
+                  aria-describedby={errors.capacity ? "room-capacity-error" : undefined}
                   onChange={e => handleFieldChange("capacity", e.target.value)}
+                  onBlur={() => handleFieldBlur("capacity")}
                 />
                 <span style={{ color: "var(--color-body)", fontSize: 14 }}>人</span>
                 {errors.capacity && (
-                  <span style={{ color: "var(--color-danger)", fontSize: 12, marginLeft: 8 }}>{errors.capacity}</span>
+                  <span id="room-capacity-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginLeft: 8 }} role="alert">{errors.capacity}</span>
                 )}
               </div>
             </div>
@@ -315,7 +392,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
 
         {/* Section 2: 会议室设施 */}
         <div className="card-content">
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "var(--color-ink)", borderBottom: "1px solid var(--color-hairline)", paddingBottom: 10 }}>
+          <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
             会议室设施
           </h2>
 
@@ -335,47 +412,55 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
 
         {/* Section 3: 预定规则 */}
         <div className="card-content">
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "var(--color-ink)", borderBottom: "1px solid var(--color-hairline)", paddingBottom: 10 }}>
+          <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
             预定规则
           </h2>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* 开放时间 */}
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>开放时间
+              <label htmlFor="room-open-start" style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>开放时间
               </label>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <input
+                    id="room-open-start"
                     type="time"
-                    className="input"
+                    className={`input ${errors.openHours ? 'error' : ''}`}
                     style={{ width: 140 }}
                     value={formData.openStart}
+                    aria-invalid={Boolean(errors.openHours)}
                     onChange={e => handleFieldChange("openStart", e.target.value)}
+                    onBlur={() => handleFieldBlur("openHours")}
                   />
                   <span style={{ color: "var(--color-mute)" }}>至</span>
                   <input
+                    id="room-open-end"
                     type="time"
-                    className="input"
+                    className={`input ${errors.openHours ? 'error' : ''}`}
                     style={{ width: 140 }}
                     value={formData.openEnd}
+                    aria-invalid={Boolean(errors.openHours)}
+                    aria-describedby={errors.openHours ? "room-open-error" : undefined}
                     onChange={e => handleFieldChange("openEnd", e.target.value)}
+                    onBlur={() => handleFieldBlur("openHours")}
                   />
                 </div>
                 {errors.openHours && (
-                  <div style={{ color: "var(--color-danger)", fontSize: 12, marginTop: 4 }}>{errors.openHours}</div>
+                  <div id="room-open-error" style={{ color: "var(--color-danger)", fontSize: 12, lineHeight: "18px", marginTop: 4 }} role="alert">{errors.openHours}</div>
                 )}
               </div>
             </div>
 
             {/* 可提前预定范围 */}
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
-                <span style={{ color: "var(--color-danger)", marginRight: 4 }}>*</span>提前预定
+              <label htmlFor="room-book-ahead" style={{ fontSize: 14, fontWeight: 500, color: "var(--color-ink)", marginTop: 6 }}>
+                <span style={{ color: "var(--color-danger)", marginRight: 4 }} aria-hidden="true">*</span>提前预定
               </label>
               <div>
                 <select
+                  id="room-book-ahead"
                   className="select"
                   style={{ width: 220 }}
                   value={formData.bookAheadDays}
@@ -393,6 +478,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
               <label style={{ fontSize: 14, color: "var(--color-body)" }}>预定需审批</label>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <label className="switch">
+                  <span className="sr-only">预定需审批</span>
                   <input
                     type="checkbox"
                     checked={formData.needApproval}
@@ -410,6 +496,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
               <label style={{ fontSize: 14, color: "var(--color-body)" }}>允许周期预定</label>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <label className="switch">
+                  <span className="sr-only">允许周期预定</span>
                   <input
                     type="checkbox"
                     checked={formData.allowRecurring}
@@ -427,6 +514,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
               <label style={{ fontSize: 14, color: "var(--color-body)" }}>支持会议室抢占</label>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <label className="switch">
+                  <span className="sr-only">支持会议室抢占</span>
                   <input
                     type="checkbox"
                     checked={formData.allowPreempt}
@@ -471,16 +559,17 @@ const RoomFormPage = ({ initialRoom, existingRooms, onSave, onCancel, showToast 
 
         {/* Section 4: 备注 */}
         <div className="card-content">
-          <h2 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "var(--color-ink)", borderBottom: "1px solid var(--color-hairline)", paddingBottom: 10 }}>
+          <h2 style={{ margin: "0 0 16px 0", fontSize: 16, fontWeight: 600, lineHeight: "24px", color: "var(--color-ink)", borderBottom: "1px solid var(--color-divider)", paddingBottom: 10 }}>
             备注信息
           </h2>
 
           <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "start", gap: 16 }}>
-            <label style={{ fontSize: 14, color: "var(--color-body)", marginTop: 6 }}>
+            <label htmlFor="room-note" style={{ fontSize: 14, color: "var(--color-body)", marginTop: 6 }}>
               备注
             </label>
             <div>
               <textarea
+                id="room-note"
                 className="input"
                 maxLength={100}
                 placeholder="门牌、投影仪连接线、特定使用须知等补充信息（上限100字）"

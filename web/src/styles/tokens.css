@@ -1,0 +1,71 @@
+/* 智信 DESIGN.md 令牌。组件里用 var(--color-*)，Uno 主题与此保持同值。 */
+:root {
+  --color-primary: #3e7eff;
+  --color-primary-pressed: #2e6be6;
+  --color-primary-border: #d8e5ff;
+  --color-primary-bg: #ebf2ff;
+  --color-on-primary: #ffffff;
+
+  --color-ink: #1f2329;
+  --color-body: #5d616b;
+  --color-mute: #8f959e;
+  --color-disabled: #c9cfd8;
+  --color-control: #c9cfd8;
+  --color-control-active: #e0e4e8;
+  --color-hairline: #e1e5eb;
+  --color-divider: #e7e7e7;
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #f4f6f8;
+
+  --color-success: #36d18e;
+  --color-success-bg: #eafaf3;
+  --color-warning: #feac00;
+  --color-warning-bg: #fef6e5;
+  --color-danger: #fa4141;
+  --color-danger-pressed: #dd3636;
+  --color-overdue: #ff950a;
+
+  --color-biz-ts: #63e4d7;
+  --color-biz-ts-bg: #effcfb;
+  --color-biz-t0: #b080ff;
+  --color-biz-t0-bg: #f7f2ff;
+  --color-biz-external: #45c5f7;
+  --color-biz-search-hit: #fdf3aa;
+
+  --font-family:
+    -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-md: 8px;
+  --spacing-lg: 12px;
+  --spacing-xl: 16px;
+  --spacing-2xl: 20px;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  --shadow-light: 0 0 4px 0 rgba(0, 0, 0, 0.1);
+  --shadow-heavy: 0 0 10px rgba(0, 0, 0, 0.3);
+  --shadow-split: 0 -1px 0 0 #f4f6f8;
+
+  --topbar-height: 48px;
+  --sidenav-width: 60px;
+  --menu-active-bar: 4px;
+  --container-max: 1200px;
+  --control-height: 32px;
+  --duration-fast: 150ms;
+  --duration: 200ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --scrim: rgba(0, 0, 0, 0.45);
+  --z-nav: 20;
+  --z-overlay: 1000;
+  --z-toast: 2000;
+}

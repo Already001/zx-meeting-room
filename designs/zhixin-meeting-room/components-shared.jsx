@@ -3,6 +3,7 @@
 const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => {
   return (
     <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden" }}>
+      <a className="sr-only" href="#main-content">跳到主内容</a>
       {/* 60px Left Sidenav */}
       <aside style={{
         width: "var(--sidenav-width)",
@@ -29,20 +30,26 @@ const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => 
           <window.IconAppLogo />
         </div>
 
-        {/* Nav item */}
-        <div style={{
-          width: "100%",
-          height: 44,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 2,
-          position: "relative",
-          backgroundColor: activeNav === "rooms" ? "var(--color-primary-bg)" : "transparent",
-          color: activeNav === "rooms" ? "var(--color-primary)" : "var(--color-body)",
-          cursor: "pointer"
-        }}>
+        <nav aria-label="主导航" style={{ width: "100%" }}>
+          <button
+            type="button"
+            aria-current={activeNav === "rooms" ? "page" : undefined}
+            style={{
+              width: "100%",
+              height: 44,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 2,
+              position: "relative",
+              backgroundColor: activeNav === "rooms" ? "var(--color-primary-bg)" : "transparent",
+              color: activeNav === "rooms" ? "var(--color-primary)" : "var(--color-body)",
+              cursor: "pointer",
+              border: "none",
+              padding: 0
+            }}
+          >
           {activeNav === "rooms" && (
             <div style={{
               position: "absolute",
@@ -54,8 +61,9 @@ const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => 
             }} />
           )}
           <window.IconMeetingRoom />
-          <span style={{ fontSize: 10, lineHeight: 1 }}>会议室</span>
-        </div>
+          <span style={{ fontSize: 10, lineHeight: "16px" }}>会议室</span>
+          </button>
+        </nav>
       </aside>
 
       {/* Main Area */}
@@ -72,7 +80,7 @@ const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => 
           flexShrink: 0
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontWeight: 600, fontSize: 15, color: "var(--color-ink)" }}>智信 · 智能会议室管理平台</span>
+            <span style={{ fontWeight: 600, fontSize: 16, lineHeight: "24px", color: "var(--color-ink)" }}>智信 · 智能会议室管理平台</span>
             <span style={{ fontSize: 12, color: "var(--color-mute)", backgroundColor: "var(--color-canvas-soft)", padding: "2px 6px", borderRadius: 4 }}>
               PC WebView (zx) / 浏览器 (main)
             </span>
@@ -100,7 +108,7 @@ const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => 
         </header>
 
         {/* Content Viewport */}
-        <main style={{
+        <main id="main-content" style={{
           flex: 1,
           overflowY: "auto",
           backgroundColor: "var(--color-canvas-soft)",
@@ -117,20 +125,39 @@ const AppShell = ({ activeNav = "rooms", children, userName = "管理员" }) => 
 
 // Modal Confirmation Dialog
 const ConfirmModal = ({ isOpen, title = "提示", message, onConfirm, onCancel, confirmText = "确定", cancelText = "取消", isDanger = false }) => {
+  const titleId = "confirm-modal-title";
+  const descId = "confirm-modal-desc";
+
+  React.useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onCancel]);
+
   if (!isOpen) return null;
   return (
     <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-card" onClick={e => e.stopPropagation()}>
+      <div
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        onClick={e => e.stopPropagation()}
+      >
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-divider)", display: "flex", alignItems: "center", gap: 8 }}>
           <window.IconAlert />
-          <span style={{ fontWeight: 600, fontSize: 15 }}>{title}</span>
+          <span id={titleId} style={{ fontWeight: 600, fontSize: 16, lineHeight: "24px" }}>{title}</span>
         </div>
-        <div style={{ padding: "20px", fontSize: 14, color: "var(--color-body)", lineHeight: "22px" }}>
+        <div id={descId} style={{ padding: "20px", fontSize: 14, color: "var(--color-body)", lineHeight: "20px" }}>
           {message}
         </div>
-        <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-divider)", display: "flex", justifyContent: "flex-end", gap: 10, backgroundColor: "var(--color-canvas-soft)" }}>
-          <button className="btn btn-secondary" onClick={onCancel}>{cancelText}</button>
-          <button className={`btn ${isDanger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>{confirmText}</button>
+        <div style={{ padding: "12px 20px", borderTop: "1px solid var(--color-divider)", display: "flex", justifyContent: "flex-end", gap: 8, backgroundColor: "var(--color-canvas-soft)" }}>
+          <button type="button" className="btn btn-secondary" onClick={onCancel}>{cancelText}</button>
+          <button type="button" className={`btn ${isDanger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>{confirmText}</button>
         </div>
       </div>
     </div>

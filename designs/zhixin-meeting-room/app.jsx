@@ -28,7 +28,7 @@ const App = () => {
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 2500);
+    }, 3000);
   };
 
   // Confirmation Modal State
@@ -140,9 +140,9 @@ const App = () => {
   return (
     <window.AppShell activeNav="rooms">
       {/* Toast notifications */}
-      <div className="toast-container">
+      <div className="toast-container" aria-live="polite" aria-relevant="additions">
         {toasts.map(t => (
-          <div key={t.id} className={`toast toast-${t.type}`}>
+          <div key={t.id} className={`toast toast-${t.type}`} role="status">
             {t.type === "success" ? <window.IconCheck /> : <window.IconAlert />}
             <span>{t.message}</span>
           </div>

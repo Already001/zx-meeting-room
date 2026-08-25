@@ -4,15 +4,8 @@ import { showSuccessToast, showFailToast, showDialog } from "vant";
 import { fullscreenElement } from "@/use/useElementState";
 import useMobileEnv from "@/use/useMobileEnv";
 
-// 本文件是显式 import（非模板里的 AutoImport/Components 按需注册），
-// 三处 main.js 已去掉整包 CSS，这里必须自己补上用到的组件样式，否则弹窗会裸奔。
-// 用 element-plus 自带的按需样式入口（而非手挑 theme-chalk/*.css），
-// 因为 message-box 依赖 base/input/button/overlay，手挑容易漏（漏过 base.css 会导致
-// 全部 --el-* 设计变量缺失，弹框变透明底裸按钮）；与 vant 侧写法保持对称。
-import "element-plus/es/components/message/style/css";
-import "element-plus/es/components/message-box/style/css";
-import "vant/es/toast/style";
-import "vant/es/dialog/style";
+// Toast / Dialog 的 CSS 在三处 main.js 里、于 style.css 之前引入，
+// 保证智信 :root 令牌能覆盖 Element Plus / Vant 的默认色板与字体。
 
 const { mobileEnv } = useMobileEnv();
 
@@ -22,11 +15,12 @@ export const showToastSuccess = (message, duration) => {
     showSuccessToast({
       message,
       forbidClick: true,
-      duration: duration ? duration : 2000
+      duration: duration ? duration : 3000
     });
   } else {
     ElMessage.success({
       message,
+      duration: duration ? duration : 3000,
       appendTo: unref(fullscreenElement) || "body"
     });
   }
@@ -40,6 +34,7 @@ export const showToastError = (message, showWarning = false) => {
     ElMessage({
       type: showWarning ? "warning" : "error",
       message,
+      duration: 3000,
       appendTo: unref(fullscreenElement) || "body"
     });
   }
@@ -54,7 +49,7 @@ export const confirmNoted = (message, { title, confirmText, ...args } = {}) => {
       width: "80%",
       confirmButtonColor: "#3E7EFF",
       confirmButtonText: confirmText || "确定",
-      overlayStyle: { background: "rgba(0, 0, 0, 0.5) !important" }
+      overlayStyle: { background: "rgba(0, 0, 0, 0.45)" }
     });
   }
   return ElMessageBox.confirm(message, title || "提示", {
