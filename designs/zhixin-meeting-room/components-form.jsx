@@ -51,7 +51,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, dicts, onSave, onCancel, sho
   const [errors, setErrors] = React.useState({});
   const [isSaving, setIsSaving] = React.useState(false);
 
-  // Derive existing buildings from rooms for dropdown suggestions
+  // 建筑来自字典表，仅允许选择
   const dictBuildings = React.useMemo(() => {
     const names = window.dictNames(dicts, "building");
     if (formData.buildingName && !names.includes(formData.buildingName)) {
@@ -66,16 +66,13 @@ const RoomFormPage = ({ initialRoom, existingRooms, dicts, onSave, onCancel, sho
     return [...names, ...extra];
   }, [dicts, formData.facilities]);
 
-  // Derive existing floors for current building
-  const existingFloors = React.useMemo(() => {
-    const set = new Set();
-    existingRooms.forEach(r => {
-      if (r.buildingName === formData.buildingName && r.floorName) {
-        set.add(r.floorName);
-      }
-    });
-    return Array.from(set);
-  }, [existingRooms, formData.buildingName]);
+  const floorOptions = React.useMemo(() => {
+    const names = [...window.FLOOR_OPTIONS];
+    if (formData.floorName && !names.includes(formData.floorName)) {
+      names.unshift(formData.floorName);
+    }
+    return names;
+  }, [formData.floorName]);
 
   // Field change helpers
   const handleFieldChange = (key, value) => {
@@ -116,10 +113,10 @@ const RoomFormPage = ({ initialRoom, existingRooms, dicts, onSave, onCancel, sho
       }
     }
     if (key === "buildingName" && (!data.buildingName || !data.buildingName.trim())) {
-      errs.buildingName = "请选择或输入建筑";
+      errs.buildingName = "请选择建筑";
     }
     if (key === "floorName" && (!data.floorName || !data.floorName.trim())) {
-      errs.floorName = "请选择或输入楼层";
+      errs.floorName = "请选择楼层";
     }
     if (key === "capacity") {
       const cap = Number(data.capacity);
@@ -185,10 +182,10 @@ const RoomFormPage = ({ initialRoom, existingRooms, dicts, onSave, onCancel, sho
     }
 
     if (!formData.buildingName || !formData.buildingName.trim()) {
-      errs.buildingName = "请选择或输入建筑";
+      errs.buildingName = "请选择建筑";
     }
     if (!formData.floorName || !formData.floorName.trim()) {
-      errs.floorName = "请选择或输入楼层";
+      errs.floorName = "请选择楼层";
     }
     const cap = Number(formData.capacity);
     if (!formData.capacity || isNaN(cap) || cap < 1 || cap > 999 || !Number.isInteger(cap)) {
@@ -212,7 +209,7 @@ const RoomFormPage = ({ initialRoom, existingRooms, dicts, onSave, onCancel, sho
     if (!validate()) {
       showToast("请检查表单必填项", "error");
       requestAnimationFrame(() => {
-        const firstInvalid = document.querySelector("form .input.error, form select.error");
+        const firstInvalid = document.querySelector("form .input.error, form select.error, form .select.error");
         if (firstInvalid) firstInvalid.focus();
       });
       return;
@@ -312,23 +309,17 @@ const RoomFormPage = ({ initialRoom, existingRooms, dicts, onSave, onCancel, sho
               <div className="form-split">
                 <div>
                   <label className="sr-only" htmlFor="room-building">建筑</label>
-                  <input
+                  <window.FieldSelect
                     id="room-building"
-                    type="text"
-                    list="building-list"
-                    className={`input ${errors.buildingName ? 'error' : ''}`}
-                    placeholder="选择或输入建筑（选项来自字典表）"
                     value={formData.buildingName}
+                    options={dictBuildings}
+                    placeholder="请选择建筑"
+                    error={Boolean(errors.buildingName)}
                     aria-invalid={Boolean(errors.buildingName)}
                     aria-describedby={errors.buildingName ? "room-building-error" : undefined}
-                    onChange={e => handleFieldChange("buildingName", e.target.value)}
+                    onChange={next => handleFieldChange("buildingName", next)}
                     onBlur={() => handleFieldBlur("buildingName")}
                   />
-                  <datalist id="building-list">
-                    {dictBuildings.map(b => (
-                      <option key={b} value={b} />
-                    ))}
-                  </datalist>
                   {errors.buildingName && (
                     <div id="room-building-error" className="form-error" role="alert">{errors.buildingName}</div>
                   )}
@@ -336,24 +327,18 @@ const RoomFormPage = ({ initialRoom, existingRooms, dicts, onSave, onCancel, sho
 
                 <div>
                   <label className="sr-only" htmlFor="room-floor">楼层</label>
-                  <input
+                  <window.FieldSelect
                     id="room-floor"
-                    type="text"
-                    list="floor-list"
-                    disabled={!formData.buildingName}
-                    className={`input ${errors.floorName ? 'error' : ''}`}
-                    placeholder={formData.buildingName ? "选择或输入楼层" : "请先选择/输入建筑"}
                     value={formData.floorName}
+                    options={floorOptions}
+                    placeholder={formData.buildingName ? "请选择楼层" : "请先选择建筑"}
+                    error={Boolean(errors.floorName)}
+                    disabled={!formData.buildingName}
                     aria-invalid={Boolean(errors.floorName)}
                     aria-describedby={errors.floorName ? "room-floor-error" : undefined}
-                    onChange={e => handleFieldChange("floorName", e.target.value)}
+                    onChange={next => handleFieldChange("floorName", next)}
                     onBlur={() => handleFieldBlur("floorName")}
                   />
-                  <datalist id="floor-list">
-                    {existingFloors.map(f => (
-                      <option key={f} value={f} />
-                    ))}
-                  </datalist>
                   {errors.floorName && (
                     <div id="room-floor-error" className="form-error" role="alert">{errors.floorName}</div>
                   )}

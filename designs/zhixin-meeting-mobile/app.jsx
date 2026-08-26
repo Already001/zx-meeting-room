@@ -2,6 +2,7 @@
 
 const WEEK_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const BASE_DATE = new Date(2026, 7, 25);
+const overlayRoot = document.getElementById("overlay-root") || document.body;
 
 const toIso = (date) => {
   const y = date.getFullYear();
@@ -305,7 +306,7 @@ const App = () => {
           onNotice={showToast}
         />
 
-        {sharedModals}
+        {ReactDOM.createPortal(sharedModals, overlayRoot)}
       </div>
     );
   }
@@ -405,7 +406,7 @@ const App = () => {
         <window.MobileOccupancySheet payload={occupancy} onClose={() => setOccupancy(null)} />
       )}
 
-      {sharedModals}
+      {ReactDOM.createPortal(sharedModals, overlayRoot)}
     </div>
   );
 };

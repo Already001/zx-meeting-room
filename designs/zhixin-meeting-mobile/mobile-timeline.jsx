@@ -203,7 +203,7 @@ const MobileMiniBar = ({ room, selection, nowMin, isToday, onTapTrack, onTapEven
   );
 };
 
-const MobileRoomCard = ({ room, selection, nowMin, isToday, onTapTrack, onTapEvent, onOpenRoom, onNotice }) => (
+const MobileRoomCard = ({ room, selection, nowMin, isToday, onTapTrack, onTapEvent, onOpenRoom }) => (
   <article className="m-room-card">
     <div className="m-room-head">
       <button type="button" className="m-room-main" onClick={() => onOpenRoom(room)}>
@@ -220,14 +220,6 @@ const MobileRoomCard = ({ room, selection, nowMin, isToday, onTapTrack, onTapEve
           </span>
         </span>
       </button>
-      <div className="m-room-hw">
-        <button type="button" className="m-room-hw-btn" aria-label="电话" onClick={() => onNotice("硬件电话暂未接入")}>
-          <window.IconPhone />
-        </button>
-        <button type="button" className="m-room-hw-btn" aria-label="投屏" onClick={() => onNotice("投屏暂未接入")}>
-          <window.IconCast />
-        </button>
-      </div>
     </div>
     <MobileMiniBar
       room={room}
@@ -297,7 +289,6 @@ const MobileRoomList = ({ rooms, selection, setSelection, isToday, onTapEvent, o
             onTapTrack={handleTapTrack}
             onTapEvent={onTapEvent}
             onOpenRoom={onOpenRoom}
-            onNotice={onNotice}
           />
         ))
       )}
