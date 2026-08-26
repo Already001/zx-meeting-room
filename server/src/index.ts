@@ -1,18 +1,40 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { corsMiddleware } from "./middleware/cors.js";
+import { requireCorpId } from "./middleware/corp.js";
 import health from "./routes/health.js";
+import me from "./routes/me.js";
+
+const loadEnvFile = () => {
+  const p = path.join(path.dirname(fileURLToPath(import.meta.url)), "../.env");
+  if (!existsSync(p)) return;
+  for (const line of readFileSync(p, "utf8").split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const i = t.indexOf("=");
+    if (i < 1) continue;
+    const k = t.slice(0, i).trim();
+    const v = t.slice(i + 1).trim();
+    if (process.env[k] === undefined) process.env[k] = v;
+  }
+};
+
+loadEnvFile();
 
 const PORT = Number(process.env.PORT || 3100);
-
 const app = new Hono();
 app.use("*", corsMiddleware);
-
-// 所有业务路由统一挂在 /meetingApi 前缀下，与 web 侧 vite proxy 及生产 nginx 反代对齐
 app.route("/meetingApi", health);
 
-// 按智信约定：错误路径也返回 HTTP 200 + 业务码信封，避免 web 侧 http.js 的
-// validateStatus/retryXHR 把 404/500 误判为需要重试的异常（一次打错路径变 4 次请求）
+type Vars = { corpId: string; userId: string; userName: string; dept: string };
+const api = new Hono<{ Variables: Vars }>();
+api.use("*", requireCorpId);
+api.route("/", me);
+app.route("/meetingApi", api);
+
 app.notFound((c) => c.json({ code: "M4004", data: null, msg: "接口不存在" }));
 app.onError((e, c) => {
   console.error(e);
