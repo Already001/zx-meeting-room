@@ -1,5 +1,13 @@
 import axios from "axios";
-import { getToken, setToken, getCorpId, showToastError } from "@/utils";
+import {
+  getToken,
+  setToken,
+  getCorpId,
+  getUserId,
+  getUserName,
+  getDept,
+  showToastError
+} from "@/utils";
 
 let errorFlag = false;
 let IsRefrshToken = false; // 是否正在刷新 token
@@ -49,6 +57,13 @@ export const insRequestArgs = [
       if (!request.headers.zxCorpId) {
         request.headers.zxCorpId = getCorpId();
       }
+      const userId = getUserId();
+      if (userId && !request.headers.zxUserId) request.headers.zxUserId = userId;
+      const userName = getUserName();
+      if (userName && !request.headers.zxUserName)
+        request.headers.zxUserName = userName;
+      const dept = getDept();
+      if (dept && !request.headers.zxUserDept) request.headers.zxUserDept = dept;
     }
     return request;
   },
