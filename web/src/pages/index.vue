@@ -1,3 +1,6 @@
 <template>
-  <div>board placeholder <router-link to="/admin">管理</router-link></div>
+  <BookingBoardPage />
 </template>
+<script setup>
+import BookingBoardPage from "@/features/booking/BookingBoardPage.vue";
+</script>
