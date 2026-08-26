@@ -7,6 +7,7 @@ import { corsMiddleware } from "./middleware/cors.js";
 import { requireCorpId } from "./middleware/corp.js";
 import health from "./routes/health.js";
 import me from "./routes/me.js";
+import dicts from "./routes/dicts.js";
 
 const loadEnvFile = () => {
   const p = path.join(path.dirname(fileURLToPath(import.meta.url)), "../.env");
@@ -33,6 +34,7 @@ type Vars = { corpId: string; userId: string; userName: string; dept: string };
 const api = new Hono<{ Variables: Vars }>();
 api.use("*", requireCorpId);
 api.route("/", me);
+api.route("/", dicts);
 app.route("/meetingApi", api);
 
 app.notFound((c) => c.json({ code: "M4004", data: null, msg: "接口不存在" }));
