@@ -9,6 +9,7 @@ import health from "./routes/health.js";
 import me from "./routes/me.js";
 import dicts from "./routes/dicts.js";
 import rooms from "./routes/rooms.js";
+import bookings from "./routes/bookings.js";
 
 const loadEnvFile = () => {
   const p = path.join(path.dirname(fileURLToPath(import.meta.url)), "../.env");
@@ -37,6 +38,7 @@ api.use("*", requireCorpId);
 api.route("/", me);
 api.route("/", dicts);
 api.route("/", rooms);
+api.route("/", bookings);
 app.route("/meetingApi", api);
 
 app.notFound((c) => c.json({ code: "M4004", data: null, msg: "接口不存在" }));
