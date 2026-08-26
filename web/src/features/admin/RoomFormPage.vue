@@ -200,7 +200,7 @@ const {
   save
 } = useRoomForm({ id: roomId, active });
 
-const { markClean, confirmLeave } = useDirtyGuard(form);
+const { markClean } = useDirtyGuard(form);
 
 watch(loading, (now, prev) => {
   if (prev && !now) markClean();
@@ -210,8 +210,8 @@ const onOpenEndChange = () => {
   formRef.value?.validateField("openStart");
 };
 
-const onCancel = async () => {
-  if (await confirmLeave()) router.push("/admin");
+const onCancel = () => {
+  router.push("/admin");
 };
 
 const onSave = async () => {
