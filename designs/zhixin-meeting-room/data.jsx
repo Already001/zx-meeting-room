@@ -133,3 +133,5 @@ window.BOOK_AHEAD_OPTIONS = [
   { value: 90, label: "90 天（3个月内）" },
   { value: 180, label: "180 天（半年内）" }
 ];
+
+window.FLOOR_OPTIONS = Array.from({ length: 20 }, (_, i) => `${i + 1}层`);

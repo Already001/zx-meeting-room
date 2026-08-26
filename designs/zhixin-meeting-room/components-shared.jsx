@@ -100,7 +100,100 @@ const ConfirmModal = ({ isOpen, title = "提示", message, onConfirm, onCancel, 
   );
 };
 
+const FieldSelect = ({
+  id,
+  value,
+  options,
+  placeholder,
+  error,
+  disabled,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
+  onChange,
+  onBlur
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const onDocDown = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) {
+        setOpen(false);
+        if (onBlur) onBlur();
+      }
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        if (onBlur) onBlur();
+      }
+    };
+    document.addEventListener("mousedown", onDocDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onBlur]);
+
+  const handleToggle = () => {
+    if (disabled) return;
+    setOpen((prev) => {
+      const next = !prev;
+      if (prev && !next && onBlur) onBlur();
+      return next;
+    });
+  };
+
+  const handleSelect = (nextValue) => {
+    onChange(nextValue);
+    setOpen(false);
+  };
+
+  return (
+    <div className={`field-select${open ? " is-open" : ""}`} ref={rootRef}>
+      <button
+        type="button"
+        id={id}
+        className={`select field-select-trigger${error ? " error" : ""}${open ? " is-open" : ""}`}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        onClick={handleToggle}
+      >
+        <span className={value ? "field-select-value" : "field-select-placeholder"}>
+          {value || placeholder}
+        </span>
+      </button>
+      {open && (
+        <ul className="field-select-menu" role="listbox" aria-labelledby={id}>
+          {options.length === 0 ? (
+            <li className="field-select-empty">暂无选项</li>
+          ) : (
+            options.map((opt) => (
+              <li key={opt} role="option" aria-selected={opt === value}>
+                <button
+                  type="button"
+                  className={`field-select-item${opt === value ? " is-active" : ""}`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => handleSelect(opt)}
+                >
+                  {opt}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 Object.assign(window, {
   AppShell,
-  ConfirmModal
+  ConfirmModal,
+  FieldSelect
 });

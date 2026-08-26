@@ -431,7 +431,7 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, bo
                 </span>
               )
             ))}
-            {isToday && (
+            {isToday && rooms.length > 0 && (
               <span className="tl-axis-now" style={{ left: window.TL.pct(nowMin) }}>
                 {window.fromMinutes(nowMin)}
               </span>
@@ -448,7 +448,7 @@ const PcTimelineBoard = ({ rooms, selection, setSelection, showHost, isToday, bo
         </div>
 
         <div className="tl-body">
-          {!(selection && selection.confirmed) && (
+          {rooms.length > 0 && !(selection && selection.confirmed) && (
           <div className="tl-guides">
             <div className="tl-room-cell tl-guides-spacer" />
             <div className="tl-track">

@@ -18,6 +18,15 @@ export const setToken = (data) => {
 /** 取企业 ID */
 export const getCorpId = () => sessionStorage.getItem("meetingCorpId");
 
+/** 取用户 ID */
+export const getUserId = () => sessionStorage.getItem("meetingUserId");
+
+/** 取用户姓名 */
+export const getUserName = () => sessionStorage.getItem("meetingUserName");
+
+/** 取用户部门 */
+export const getDept = () => sessionStorage.getItem("meetingUserDept");
+
 /** 解析 URL 查询参数（用 URLSearchParams 按规范处理 + 与 %XX 转义） */
 export const getUrlParams = (data) => {
   const qs = typeof data === "string" ? data.split("?")[1] || "" : data.search;
@@ -41,6 +50,9 @@ export const bootstrapAuthFromUrl = () => {
   const token = params.get("token");
   const corpId = params.get("corpId");
   const clientType = params.get("clientType");
+  const userId = params.get("userId");
+  const userName = params.get("userName");
+  const dept = params.get("dept");
 
   if (token) {
     setToken({
@@ -54,13 +66,28 @@ export const bootstrapAuthFromUrl = () => {
   if (clientType) {
     sessionStorage.setItem("clientType", clientType);
   }
+  if (userId) {
+    sessionStorage.setItem("meetingUserId", userId);
+  }
+  if (userName) {
+    sessionStorage.setItem("meetingUserName", userName);
+  }
+  if (dept) {
+    sessionStorage.setItem("meetingUserDept", dept);
+  }
 
   // 落盘之后再清理地址栏里的敏感参数，避免明文 token 残留（Referer/日志泄露）
-  if (token || corpId || clientType) {
+  if (token || corpId || clientType || userId || userName || dept) {
     const u = new URL(location.href);
-    ["token", "refreshToken", "corpId", "clientType"].forEach((k) =>
-      u.searchParams.delete(k)
-    );
+    [
+      "token",
+      "refreshToken",
+      "corpId",
+      "clientType",
+      "userId",
+      "userName",
+      "dept"
+    ].forEach((k) => u.searchParams.delete(k));
     history.replaceState(null, "", u.toString());
   }
 

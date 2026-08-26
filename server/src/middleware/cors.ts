@@ -4,6 +4,16 @@ import { cors } from "hono/cors";
 export const corsMiddleware = cors({
   origin: ["http://localhost:6273", "http://127.0.0.1:6273"],
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowHeaders: ["Content-Type", "Authorization", "zxCorpId", "clientType", "version", "retrykey"],
+  allowHeaders: [
+    "Content-Type",
+    "Authorization",
+    "zxCorpId",
+    "zxUserId",
+    "zxUserName",
+    "zxUserDept",
+    "clientType",
+    "version",
+    "retrykey"
+  ],
   maxAge: 600
 });

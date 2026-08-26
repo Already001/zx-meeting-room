@@ -13,3 +13,7 @@ auto-imports.d.ts
 tsconfig.tsbuildinfo
 web/src/assets/index.ts
 web/src/server/index.js
+.worktrees/
+.superpowers/
+server/data/*.sqlite
+server/data/*.sqlite-*

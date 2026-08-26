@@ -1,6 +1,11 @@
 import { unref } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
-import { showSuccessToast, showFailToast, showDialog } from "vant";
+import {
+  showSuccessToast,
+  showFailToast,
+  showDialog,
+  showConfirmDialog
+} from "vant";
 import { fullscreenElement } from "@/use/useElementState";
 import useMobileEnv from "@/use/useMobileEnv";
 
@@ -62,4 +67,38 @@ export const confirmNoted = (message, { title, confirmText, ...args } = {}) => {
     appendTo: unref(fullscreenElement) || "body",
     ...args
   });
+};
+
+/** 双按钮确认弹框，取消/关闭返回 false，确定返回 true */
+export const confirmAsk = (
+  message,
+  { title, confirmText, cancelText, confirmButtonClass, ...args } = {}
+) => {
+  if (mobileEnv.value) {
+    return showConfirmDialog({
+      title: title || "提示",
+      message,
+      confirmButtonText: confirmText || "确定",
+      cancelButtonText: cancelText || "取消",
+      confirmButtonColor: "#3E7EFF",
+      overlayStyle: { background: "rgba(0, 0, 0, 0.45)" },
+      ...args
+    })
+      .then(() => true)
+      .catch(() => false);
+  }
+  return ElMessageBox.confirm(message, title || "提示", {
+    confirmButtonText: confirmText || "确定",
+    cancelButtonText: cancelText || "取消",
+    distinguishCancelAndClose: true,
+    confirmButtonClass,
+    type: "warning",
+    autofocus: false,
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+    appendTo: unref(fullscreenElement) || "body",
+    ...args
+  })
+    .then(() => true)
+    .catch(() => false);
 };

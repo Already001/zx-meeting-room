@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>智能会议室原型 · 自动化测试报告</title>
+  <style>
+    :root {
+      --ink: #1f2329; --body: #5d616b; --mute: #8f959e;
+      --line: #e1e5eb; --bg: #f4f6f8; --card: #fff;
+      --primary: #3e7eff; --ok: #36d18e; --warn: #feac00; --bad: #fa4141;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink); background: var(--bg); }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    h2 { font-size: 18px; margin: 32px 0 12px; }
+    .meta { color: var(--body); margin-bottom: 24px; }
+    .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 28px; }
+    .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    .kpi b { display: block; font-size: 28px; line-height: 1.2; }
+    .kpi.ok b { color: #1a9f6a; } .kpi.bad b { color: var(--bad); } .kpi.fix b { color: var(--primary); }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { background: #fafbfc; font-weight: 600; color: var(--body); font-size: 12px; }
+    .tag { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12px; }
+    .tag-fail { background: #ffecec; color: var(--bad); }
+    .tag-fixed { background: #ebf2ff; color: var(--primary); }
+    .tag-pass { background: #eafaf3; color: #1a9f6a; }
+    .tag-skip { background: #f4f6f8; color: var(--mute); }
+    .tag-p0 { background: #ffecec; color: var(--bad); }
+    .tag-p1 { background: #fef6e5; color: #b36b00; }
+    .tag-p2, .tag-p3 { background: #f4f6f8; color: var(--body); }
+    .shot { margin: 24px 0; }
+    .shot img { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 28px; }
+    .pair figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .pair img { display: block; width: 100%; background: #fff; }
+    .pair figcaption { padding: 8px 12px; font-size: 12px; color: var(--body); border-top: 1px solid var(--line); }
+    .pair .cap-before { background: #ffecec; color: var(--bad); }
+    .pair .cap-after { background: #eafaf3; color: #1a9f6a; }
+    .finding-block { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 0 0 20px; }
+    .muted { color: var(--mute); font-size: 12px; }
+    nav a { color: var(--primary); margin-right: 16px; text-decoration: none; }
+    @media (max-width: 800px) { .kpis, .pair { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>智能会议室原型 · 自动化测试报告</h1>
+    <p class="meta">
+      时间：2026-08-26 11:05–12:35 (CST) · 执行人：AI Agent ·
+      对象：designs/zhixin-meeting-room + designs/zhixin-meeting-mobile ·
+      服务：http://127.0.0.1:8766/（8765 被系统拒绝绑定，已换端口）· 视口：1440×900 / 375×812
+      · 12:14 复审漏报：PC 预定弹层未居中、空态仍画当前时间线，已补修并复验
+    </p>
+    <nav>
+      <a href="#kpis">总览</a>
+      <a href="#findings">问题与修复（含改前改后图）</a>
+      <a href="#screens">分屏结果</a>
+      <a href="#shots">走查截图</a>
+    </nav>
+
+    <div class="kpis" id="kpis">
+      <div class="kpi"><span>用例</span><b>19</b></div>
+      <div class="kpi ok"><span>通过</span><b>16</b></div>
+      <div class="kpi bad"><span>P0/P1 未修</span><b>0</b></div>
+      <div class="kpi fix"><span>已改并复验</span><b>3</b></div>
+      <div class="kpi"><span>跳过</span><b>0</b></div>
+      <div class="kpi"><span>截图</span><b>56</b></div>
+    </div>
+
+    <h2 id="findings">问题与修复（每条都要改前 / 改后截图）</h2>
+    <article class="finding-block" id="F-01">
+      <p>
+        <strong>F-01</strong>
+        <span class="tag tag-p2">P2</span>
+        <span class="tag tag-fixed">已改并复验</span>
+        · B2 预定端移动筛选条 · 芯片与「重置」重叠
+      </p>
+      <p>375 视口下，建筑·楼层选成「奥城大厦 8层」后，第三枚「设施」芯片被右侧「重置」挡住。点击「设施」会被重置拦截，筛选条无法完整操作。</p>
+      <p class="muted">designs/zhixin-meeting-mobile/styles.css · designs/zhixin-meeting-mobile/Mobile Room Reservation.html · 类型：visual</p>
+      <div class="pair">
+        <figure>
+          <img src="assets/proto-qa-20260826-1105/fixes/F-01-before.png" alt="F-01 改前" />
+          <figcaption class="cap-before">改前 · 「设施」被「重置」挡住，无法点开</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/proto-qa-20260826-1105/fixes/F-01-after.png" alt="F-01 改后" />
+          <figcaption class="cap-after">改后 · 芯片换行，「设施」与「重置」不再重叠</figcaption>
+        </figure>
+      </div>
+    </article>
+
+    <article class="finding-block" id="F-02">
+      <p>
+        <strong>F-02</strong>
+        <span class="tag tag-p1">P1</span>
+        <span class="tag tag-fixed">已改并复验</span>
+        · C1/C2 PC 预定弹层未居中、底部被裁
+      </p>
+      <p>
+        PC ≥1024 下「新建日程」「我的预定」「释放确认」仍沿用移动端 <code>align-items: flex-end</code>，520px 宽的 sheet 贴视口左下，表单底部（预定人 / 按钮）被裁切。
+        「确认预定」虽已 flex 居中，但 overlay 是 <code>position: absolute</code>，相对时间轴面板而不是视口。
+      </p>
+      <p class="muted">designs/zhixin-meeting-mobile/styles.css · 类型：visual / interaction · 复验几何中心 (720, 450) @ 1440×900</p>
+      <div class="pair">
+        <figure>
+          <img src="assets/proto-qa-20260826-1105/fixes/F-02-before-new-booking.png" alt="F-02 新建日程改前" />
+          <figcaption class="cap-before">改前 · 新建日程贴左下，预定人一行被裁</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/proto-qa-20260826-1105/fixes/F-02-after-new-booking.png" alt="F-02 新建日程改后" />
+          <figcaption class="cap-after">改后 · 视口正中，表单完整可见</figcaption>
+        </figure>
+      </div>
+      <div class="pair">
+        <figure>
+          <img src="assets/proto-qa-20260826-1105/fixes/F-02-before-my-bookings.png" alt="F-02 我的预定改前" />
+          <figcaption class="cap-before">改前 · 我的预定只露出标题栏</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/proto-qa-20260826-1105/fixes/F-02-after-my-bookings.png" alt="F-02 我的预定改后" />
+          <figcaption class="cap-after">改后 · 居中完整列表，释放确认同样居中</figcaption>
+        </figure>
+      </div>
+    </article>
+
+    <article class="finding-block" id="F-03">
+      <p>
+        <strong>F-03</strong>
+        <span class="tag tag-p2">P2</span>
+        <span class="tag tag-fixed">已改并复验</span>
+        · C3 PC 筛选无结果空态仍画当前时间线
+      </p>
+      <p>
+        搜索无命中后房间行清空，空态文案居中，但 <code>.tl-guides</code> 的红线与轴顶 <code>.tl-axis-now</code> 仍按「今天」渲染，红线贯穿空白区。
+      </p>
+      <p class="muted">designs/zhixin-meeting-mobile/pc-timeline.jsx · 类型：visual · 复验 DOM：hasNowLine=false / hasAxisNow=false</p>
+      <div class="pair">
+        <figure>
+          <img src="assets/proto-qa-20260826-1105/fixes/F-03-before.png" alt="F-03 改前" />
+          <figcaption class="cap-before">改前 · 空态仍有 11:54 红线贯穿</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/proto-qa-20260826-1105/fixes/F-03-after.png" alt="F-03 改后" />
+          <figcaption class="cap-after">改后 · 只留空文案与小时轴，无当前时间线</figcaption>
+        </figure>
+      </div>
+    </article>
+
+    <h2 id="screens">分屏结果</h2>
+    <table>
+      <thead><tr><th>屏幕 ID</th><th>结果</th><th>缺陷</th><th>备注</th></tr></thead>
+      <tbody>
+        <tr><td>A1 列表</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>侧栏、标题、5 条数据、「新建会议室」正常</td></tr>
+        <tr><td>A2 筛选 / 空态 / 重置</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>搜索无命中「没有符合条件的会议室」+「重置筛选」；组合筛选空态；重置恢复全量</td></tr>
+        <tr><td>A3 新建会议室</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>空提交字段校验 + Toast「请检查表单必填项」；超 30 字；同名「该名称已被使用」</td></tr>
+        <tr><td>A4 编辑</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>标题「编辑会议室」，字段回填</td></tr>
+        <tr><td>A5 脏表单 / 停用确认</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>「放弃未保存的修改？」继续编辑留在表单；取消不停用；文案「停用后该会议室将不可被预定，确定停用？」</td></tr>
+        <tr><td>A6 保存 / 启用 / 停用 / 同名</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>Toast「已停用」「已启用」；同名启用拦截「已有同名启用中的会议室，请修改名称」；停用态允许重名保存</td></tr>
+        <tr><td>A7 字典表</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>建筑 / 设施 Tab；引用数奥城 3 / 生态城 2</td></tr>
+        <tr><td>A8 字典增删改</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>空名称、重名「同类型下已有相同名称」、被引用无法删除、未引用可删、停用 Toast「已停用，表单中不再展示」</td></tr>
+        <tr><td>B1 移动首页</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>375 无横向滚动；搜索 / 日期 / 楼层 / 设施芯片；迷你时间条</td></tr>
+        <tr><td>B2 筛选 sheet</td><td><span class="tag tag-fixed">已改</span></td><td>F-01</td><td>日期 / 楼层 / 设施 sheet 可开关；无命中文案正确；长楼层名时芯片重叠已修</td></tr>
+        <tr><td>B3 选时段底栏</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>取消 / 预定 + 30分钟 / 1小时 / 2小时</td></tr>
+        <tr><td>B4 会议室详情</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>未选时段点预定 Toast「请先在时间条上轻点选择空闲时段」</td></tr>
+        <tr><td>B5 过期 / 占用</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>Toast「该时段已过期」；占用 sheet「该时段已被预定」</td></tr>
+        <tr><td>B6 新建日程</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>提交 Toast「预定成功，已加入「我的预定」」并打开我的预定</td></tr>
+        <tr><td>B7 我的预定</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>右上更多菜单「我的预定」；列表有进行中 / 待开始</td></tr>
+        <tr><td>B8 释放</td><td><span class="tag tag-pass">通过</span></td><td>—</td><td>取消不释放；确认后 Toast「会议室已提前释放」，该项从列表消失</td></tr>
+        <tr><td>C1 PC 顶栏</td><td><span class="tag tag-fixed">已改</span></td><td>F-02</td><td>顶栏功能正常；「我的预定」弹层原先贴左下被裁，已改为视口居中</td></tr>
+        <tr><td>C2 图例 / 预定人 / 拖选</td><td><span class="tag tag-fixed">已改</span></td><td>F-02</td><td>图例 / 预定人正常；确认预定与新建日程原先未居中，已改为视口居中且不再裁切</td></tr>
+        <tr><td>C3 筛选空态 / 过去占用</td><td><span class="tag tag-fixed">已改</span></td><td>F-03</td><td>空态文案正确；原先仍画当前时间红线，无房间行时已隐藏 now-line / axis-now</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="shots">走查截图（Agent 实测原型）</h2>
+
+    <div class="shot">
+      <p>A1 列表 · 默认</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A1-default.png" alt="A1 列表默认" />
+    </div>
+    <div class="shot">
+      <p>A2 筛选无命中空态</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A2-filter-empty.png" alt="A2 筛选空态" />
+    </div>
+    <div class="shot">
+      <p>A3 新建会议室 · 默认表单</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A3-create-form.png" alt="A3 新建表单" />
+    </div>
+    <div class="shot">
+      <p>A3 空提交校验</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A3-empty-validate.png" alt="A3 空提交校验" />
+    </div>
+    <div class="shot">
+      <p>A3 名称超过 30 字</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A3-name-too-long.png" alt="A3 名称超长" />
+    </div>
+    <div class="shot">
+      <p>A3 与已启用会议室同名</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A3-duplicate-name.png" alt="A3 同名拦截" />
+    </div>
+    <div class="shot">
+      <p>A4 编辑会议室 · 字段回填</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A4-edit-form.png" alt="A4 编辑表单" />
+    </div>
+    <div class="shot">
+      <p>A5 脏表单返回确认</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A5-dirty-leave.png" alt="A5 放弃未保存确认" />
+    </div>
+    <div class="shot">
+      <p>A5 列表停用确认</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A5-disable-confirm.png" alt="A5 停用确认" />
+    </div>
+    <div class="shot">
+      <p>A6 停用成功 Toast / 状态变更</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A6-toast-disabled.png" alt="A6 已停用" />
+    </div>
+    <div class="shot">
+      <p>A6 启用成功</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A6-toast-enabled.png" alt="A6 已启用" />
+    </div>
+    <div class="shot">
+      <p>A6 同名启用拦截</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A6-toast-duplicate-enable.png" alt="A6 同名启用" />
+    </div>
+    <div class="shot">
+      <p>A7 字典表 · 建筑</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A7-dict-list.png" alt="A7 字典建筑" />
+    </div>
+    <div class="shot">
+      <p>A7 字典表 · 设施</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A7-dict-facilities.png" alt="A7 字典设施" />
+    </div>
+    <div class="shot">
+      <p>A8 字典空名称校验</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A8-dict-empty-name.png" alt="A8 空名称" />
+    </div>
+    <div class="shot">
+      <p>A8 字典重名校验</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A8-dict-duplicate.png" alt="A8 重名" />
+    </div>
+    <div class="shot">
+      <p>A8 删除被引用项 Toast</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A8-dict-delete-referenced.png" alt="A8 无法删除被引用" />
+    </div>
+    <div class="shot">
+      <p>A8 新增未引用项</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A8-dict-unused-added.png" alt="A8 未引用项" />
+    </div>
+    <div class="shot">
+      <p>A8 删除未引用项确认</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A8-dict-delete-unused-confirm.png" alt="A8 删除确认" />
+    </div>
+    <div class="shot">
+      <p>A8 字典停用 Toast</p>
+      <img src="assets/proto-qa-20260826-1105/screens/A8-dict-disable-toast.png" alt="A8 字典停用" />
+    </div>
+
+    <div class="shot">
+      <p>B1 移动首页 · 375×812</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B1-home.png" alt="B1 移动首页" />
+    </div>
+    <div class="shot">
+      <p>B2 选择日期 sheet</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B2-date-sheet.png" alt="B2 日期 sheet" />
+    </div>
+    <div class="shot">
+      <p>B2 建筑 · 楼层 sheet</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B2-floor-sheet.png" alt="B2 楼层 sheet" />
+    </div>
+    <div class="shot">
+      <p>B2 应用楼层筛选后（改前重叠现场，见 F-01）</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B2-floor-filtered.png" alt="B2 楼层筛选结果" />
+    </div>
+    <div class="shot">
+      <p>B2 芯片换行修复后</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B2-filter-chips-fixed.png" alt="B2 芯片修复后" />
+    </div>
+    <div class="shot">
+      <p>B2 设施 sheet</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B2-facilities-sheet.png" alt="B2 设施 sheet" />
+    </div>
+    <div class="shot">
+      <p>B2 筛选无命中</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B2-filter-empty.png" alt="B2 移动空态" />
+    </div>
+    <div class="shot">
+      <p>B3 选中空闲时段底栏</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B3-select-bar.png" alt="B3 选时段底栏" />
+    </div>
+    <div class="shot">
+      <p>B4 会议室详情</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B4-room-detail.png" alt="B4 详情" />
+    </div>
+    <div class="shot">
+      <p>B4 未选时段点预定</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B4-need-timeslot-toast.png" alt="B4 请先选时段" />
+    </div>
+    <div class="shot">
+      <p>B5 过期时段 Toast</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B5-expired-toast.png" alt="B5 已过期" />
+    </div>
+    <div class="shot">
+      <p>B5 占用说明 sheet</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B5-occupied-sheet.png" alt="B5 已被预定" />
+    </div>
+    <div class="shot">
+      <p>B6 新建日程</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B6-new-booking.png" alt="B6 新建日程" />
+    </div>
+    <div class="shot">
+      <p>B6 提交成功 + 我的预定</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B6-success-my-bookings.png" alt="B6 预定成功" />
+    </div>
+    <div class="shot">
+      <p>B7 右上更多菜单</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B7-more-menu.png" alt="B7 更多菜单" />
+    </div>
+    <div class="shot">
+      <p>B8 释放确认</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B8-release-confirm.png" alt="B8 释放确认" />
+    </div>
+    <div class="shot">
+      <p>B8 释放后列表变化</p>
+      <img src="assets/proto-qa-20260826-1105/screens/B8-released-toast.png" alt="B8 已释放" />
+    </div>
+
+    <div class="shot">
+      <p>C1 PC 时间轴看板 · 1440×900</p>
+      <img src="assets/proto-qa-20260826-1105/screens/C1-pc-board.png" alt="C1 PC 看板" />
+    </div>
+    <div class="shot">
+      <p>C1 会议室管理演示入口</p>
+      <img src="assets/proto-qa-20260826-1105/screens/C1-mgmt-toast.png" alt="C1 管理入口" />
+    </div>
+    <div class="shot">
+      <p>C1 我的预定</p>
+      <img src="assets/proto-qa-20260826-1105/screens/C1-my-bookings.png" alt="C1 我的预定" />
+    </div>
+    <div class="shot">
+      <p>C2 图例</p>
+      <img src="assets/proto-qa-20260826-1105/screens/C2-legend.png" alt="C2 图例" />
+    </div>
+    <div class="shot">
+      <p>C2 显示预定人</p>
+      <img src="assets/proto-qa-20260826-1105/screens/C2-show-host.png" alt="C2 显示预定人" />
+    </div>
+    <div class="shot">
+      <p>C2 拖选后确认预定</p>
+      <img src="assets/proto-qa-20260826-1105/screens/C2-confirm-booking.png" alt="C2 确认预定" />
+    </div>
+    <div class="shot">
+      <p>C2 确定后进入新建日程</p>
+      <img src="assets/proto-qa-20260826-1105/screens/C2-pc-new-booking.png" alt="C2 PC 新建日程" />
+    </div>
+    <div class="shot">
+      <p>C3 PC 筛选无结果空态（改前，见 F-03）</p>
+      <img src="assets/proto-qa-20260826-1105/screens/C3-pc-empty.png" alt="C3 PC 空态改前" />
+    </div>
+    <div class="shot">
+      <p>C3 PC 筛选无结果空态（改后）</p>
+      <img src="assets/proto-qa-20260826-1105/fixes/F-03-after.png" alt="C3 PC 空态改后" />
+    </div>
+
+    <p class="muted">只改了 designs/；未改 web/ server/；未提交 git。静态服务实际端口 8766。</p>
+  </div>
+</body>
+</html>

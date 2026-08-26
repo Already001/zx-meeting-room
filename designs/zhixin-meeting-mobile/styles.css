@@ -169,15 +169,17 @@ html, body {
 
 .m-home-filters {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin-top: 8px;
+  overflow: hidden;
 }
 
 .m-home-filters-scroll {
   flex: 1;
   min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   overflow-x: auto;
@@ -188,6 +190,7 @@ html, body {
 
 .m-filter-chip {
   flex: none;
+  max-width: 100%;
   height: var(--control-height);
   padding: 0 12px;
   display: flex;
@@ -203,6 +206,13 @@ html, body {
   white-space: nowrap;
 }
 
+.m-filter-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 11em;
+}
+
 .m-filter-chip.date,
 .m-filter-chip.active {
   background: var(--color-primary-bg);
@@ -212,10 +222,12 @@ html, body {
 
 .m-filter-reset {
   flex: none;
+  position: relative;
+  z-index: 1;
   height: var(--control-height);
   padding: 0 8px;
   border: none;
-  background: none;
+  background: var(--color-canvas);
   font-family: inherit;
   font-size: 14px;
   color: var(--color-primary);
@@ -313,27 +325,6 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.m-room-hw {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding-top: 2px;
-}
-
-.m-room-hw-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  color: var(--color-mute);
-  padding: 0;
-  cursor: pointer;
 }
 
 /* 7:00–23:00 迷你占用条 */
@@ -1591,8 +1582,9 @@ html, body {
 }
 
 .tl-confirm-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 1100;
   background: rgba(31, 35, 41, 0.45);
   display: flex;
   align-items: center;
@@ -1693,12 +1685,24 @@ html, body {
 @media (min-width: 1024px) {
   html, body { background-color: var(--color-canvas); }
 
+  /* PC：弹层相对视口正中，不再沿用移动端底栏贴底对齐 */
+  .modal-overlay {
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+
   .bottom-sheet {
     width: 520px;
-    max-width: calc(100vw - 80px);
+    max-width: min(520px, calc(100vw - 48px));
     max-height: 80vh;
+    height: auto;
+    margin: 0;
+    flex: none;
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-heavy);
     animation: fadeIn 0.18s ease-out;
+    transform: none;
   }
 
   .bottom-sheet.bookings-dialog {
@@ -1709,6 +1713,7 @@ html, body {
 
   .m-action-sheet {
     width: 360px;
+    max-width: calc(100vw - 80px);
     padding: 0;
     animation: fadeIn 0.18s ease-out;
   }
