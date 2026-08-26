@@ -60,7 +60,7 @@
     <MyBookingsModal
       v-if="mine.open"
       :bookings="mine.items.value"
-      @close="mine.open = false"
+      @close="closeMine"
       @release="onRelease"
     />
   </div>
@@ -162,6 +162,10 @@ const resetFilters = () => {
 const onRefresh = async () => {
   await reload();
   showToastSuccess("已刷新会议室占用");
+};
+
+const closeMine = () => {
+  mine.open.value = false;
 };
 
 const toggleMine = async () => {
