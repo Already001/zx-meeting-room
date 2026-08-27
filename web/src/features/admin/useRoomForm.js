@@ -80,7 +80,9 @@ export const useRoomForm = ({ id, active } = {}) => {
     form.buildingName = room.buildingName || "";
     form.floorName = room.floorName || "";
     form.capacity = room.capacity == null ? null : Number(room.capacity);
-    form.facilities = Array.isArray(room.facilities) ? [...room.facilities] : [];
+    form.facilities = Array.isArray(room.facilities)
+      ? [...room.facilities]
+      : [];
     form.locationNote = room.locationNote || "";
     form.openStart = room.openStart || "07:00";
     form.openEnd = room.openEnd || "23:00";
@@ -130,7 +132,8 @@ export const useRoomForm = ({ id, active } = {}) => {
         validator: (_rule, value, callback) => {
           const trimmed = String(value || "").trim();
           if (!trimmed) callback(new Error("请输入名称"));
-          else if (trimmed.length > 30) callback(new Error("名称不超过 30 个字"));
+          else if (trimmed.length > 30)
+            callback(new Error("名称不超过 30 个字"));
           else callback();
         },
         trigger: "blur"

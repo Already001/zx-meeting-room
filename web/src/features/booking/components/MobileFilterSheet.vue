@@ -57,7 +57,9 @@
           <button type="button" class="btn-m-default" @click="resetDraft">
             重置
           </button>
-          <button type="button" class="btn-m-primary" @click="apply">确定</button>
+          <button type="button" class="btn-m-primary" @click="apply">
+            确定
+          </button>
         </div>
       </div>
     </div>

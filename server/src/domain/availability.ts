@@ -6,10 +6,13 @@ export type SearchQuery = {
   durationMin?: number;
   windowStart?: string;
   windowEnd?: string;
+  roomName?: string;
   buildingName?: string;
   floorName?: string;
   capacity?: number;
   facilities?: string[];
+  /** 用户提到的会议主题，不参与空档过滤 */
+  title?: string;
 };
 
 export type FreeSlot = {
@@ -41,6 +44,47 @@ type ShanghaiNow = { date: string; minute: number };
 
 const SLOT_STEP = 30;
 
+const CN_DIGIT: Record<string, string> = {
+  零: "0",
+  〇: "0",
+  一: "1",
+  二: "2",
+  两: "2",
+  三: "3",
+  四: "4",
+  五: "5",
+  六: "6",
+  七: "7",
+  八: "8",
+  九: "9"
+};
+
+export const normalizePlace = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/会议室|会议/g, "")
+    .replace(/[零〇一二两三四五六七八九]/g, (ch) => CN_DIGIT[ch] ?? ch);
+
+export const placeMatches = (haystack: string, needle: string): boolean => {
+  const h = normalizePlace(haystack);
+  const n = normalizePlace(needle);
+  if (!n) return true;
+  return h.includes(n) || n.includes(h);
+};
+
+const resolveQueryPlaces = (rooms: BoardRoom[], query: SearchQuery): SearchQuery => {
+  if (!query.buildingName) return query;
+  const buildingHit = rooms.some((room) => placeMatches(room.buildingName, query.buildingName!));
+  if (buildingHit) return query;
+  if (query.roomName) return { ...query, buildingName: undefined };
+  const roomHit = rooms.some((room) => placeMatches(room.name, query.buildingName!));
+  if (roomHit) {
+    return { ...query, buildingName: undefined, roomName: query.buildingName };
+  }
+  return query;
+};
+
 const resolveDuration = (durationMin?: number): number => {
   const value = durationMin ?? 60;
   if (value < SLOT_STEP || value % SLOT_STEP !== 0) {
@@ -50,8 +94,11 @@ const resolveDuration = (durationMin?: number): number => {
 };
 
 const matchesFilters = (room: BoardRoom, query: SearchQuery): boolean => {
-  if (query.buildingName != null && room.buildingName !== query.buildingName) return false;
-  if (query.floorName != null && room.floorName !== query.floorName) return false;
+  if (query.roomName != null && !placeMatches(room.name, query.roomName)) return false;
+  if (query.buildingName != null && !placeMatches(room.buildingName, query.buildingName)) {
+    return false;
+  }
+  if (query.floorName != null && !placeMatches(room.floorName, query.floorName)) return false;
   if (query.capacity != null && room.capacity < query.capacity) return false;
   if (query.facilities?.length) {
     const roomFacilities = new Set(room.facilities);
@@ -134,25 +181,26 @@ export const searchAvailability = (
   query: SearchQuery,
   now: ShanghaiNow
 ): { heading: string; rooms: QueryRoom[] } => {
-  const durationMin = resolveDuration(query.durationMin);
-  const windowStart = query.windowStart != null ? toMinutes(query.windowStart) : undefined;
-  const windowEnd = query.windowEnd != null ? toMinutes(query.windowEnd) : undefined;
+  const placed = resolveQueryPlaces(rooms, query);
+  const durationMin = resolveDuration(placed.durationMin);
+  const windowStart = placed.windowStart != null ? toMinutes(placed.windowStart) : undefined;
+  const windowEnd = placed.windowEnd != null ? toMinutes(placed.windowEnd) : undefined;
 
   const queryRooms: QueryRoom[] = [];
 
   for (const room of rooms) {
-    if (!matchesFilters(room, query)) continue;
+    if (!matchesFilters(room, placed)) continue;
 
     // 与 createBooking 一致：查询日期早于今天则跳过（该时段已过期）
-    if (query.date < now.date) continue;
+    if (placed.date < now.date) continue;
 
     // 与 createBooking 一致：超出可提前预定范围则跳过
-    if (query.date > addDays(now.date, room.bookAheadDays)) continue;
+    if (placed.date > addDays(now.date, room.bookAheadDays)) continue;
 
     let rangeStart = toMinutes(room.openStart);
     const rangeEnd = toMinutes(room.openEnd);
 
-    if (query.date === now.date) {
+    if (placed.date === now.date) {
       rangeStart = Math.max(rangeStart, nextOpen(now.minute));
     }
 
@@ -174,7 +222,7 @@ export const searchAvailability = (
       openStart: room.openStart,
       openEnd: room.openEnd,
       busy: room.busyEvents.map((e) => ({ start: e.start, end: e.end })),
-      slots: slotRanges.map((s) => toFreeSlot(room, query.date, s.start, s.end))
+      slots: slotRanges.map((s) => toFreeSlot(room, placed.date, s.start, s.end))
     });
   }
 
@@ -182,7 +230,7 @@ export const searchAvailability = (
   const topRooms = queryRooms.slice(0, 5);
 
   return {
-    heading: formatHeading(query.date, durationMin, query.windowStart, query.windowEnd),
+    heading: formatHeading(placed.date, durationMin, placed.windowStart, placed.windowEnd),
     rooms: topRooms
   };
 };

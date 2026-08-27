@@ -84,6 +84,10 @@
                 style="text-align: right"
               />
             </div>
+            <label v-if="room.allowRecurring" class="form-cell">
+              <span class="form-cell-label">每周重复</span>
+              <input v-model="repeatWeekly" type="checkbox" />
+            </label>
           </div>
         </div>
 
@@ -105,6 +109,7 @@
 <script setup>
 import { ref } from "vue";
 import { createBooking } from "@/server/module/booking";
+import { createdCount } from "../mine";
 import { fromMinutes } from "../time";
 import { getUserId, getUserName, showToastError } from "@/utils";
 
@@ -122,6 +127,7 @@ const emit = defineEmits(["close", "success"]);
 
 const title = ref("");
 const remark = ref("");
+const repeatWeekly = ref(false);
 const submitting = ref(false);
 const hostName = getUserName() || "";
 
@@ -134,15 +140,16 @@ const handleSubmit = async () => {
   submitting.value = true;
   try {
     const trimmed = title.value.trim();
-    await createBooking({
+    const result = await createBooking({
       roomId: props.room.id,
       date: props.dateIso,
       start: fromMinutes(props.start),
       end: fromMinutes(props.end),
       title: trimmed || "无主题会议",
-      remark: remark.value.trim()
+      remark: remark.value.trim(),
+      repeatWeekly: Boolean(props.room.allowRecurring && repeatWeekly.value)
     });
-    emit("success");
+    emit("success", createdCount(result));
   } catch (error) {
     showToastError(error.msg || error.message || "预定失败");
   } finally {

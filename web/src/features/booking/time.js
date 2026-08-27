@@ -45,6 +45,12 @@ export const clipOpen = (low, high, openStart, openEnd) => [
   Math.min(high, toMinutes(openEnd))
 ];
 
+/** 下沿向上取整、上沿向下取整到 30 分钟格，避免开放时间非整点时选出后端拒收的时段 */
+export const alignSlotBounds = (low, high, snap = SNAP_MIN) => [
+  Math.ceil(low / snap) * snap,
+  Math.floor(high / snap) * snap
+];
+
 export const TL = {
   DAY_MIN,
   SNAP: SNAP_MIN,
@@ -98,12 +104,86 @@ export const TL = {
   freeBounds: (events, anchor) => {
     let low = 0;
     let high = DAY_MIN;
-    (events || []).forEach((ev) => {
+    for (const ev of events || []) {
       const s = toMinutes(ev.start);
       const e = toMinutes(ev.end);
+      if (s <= anchor && anchor < e) return [anchor, anchor];
       if (e <= anchor) low = Math.max(low, e);
       else if (s >= anchor) high = Math.min(high, s);
-    });
+    }
     return [low, high];
   }
+};
+
+/**
+ * 以锚点所在空闲段为窗口：占用边界 ∩ 开放时间 ∩ 30 分钟格 ∩ 列表可视范围。
+ */
+export const slotWindow = (
+  room,
+  anchor,
+  { isToday = false, nowMin = 0, listStart = 0, listEnd = DAY_MIN } = {}
+) => {
+  let [low, high] = TL.freeBounds(room.busyEvents || [], anchor);
+  [low, high] = clipOpen(
+    low,
+    high,
+    room.openStart || "00:00",
+    room.openEnd || "24:00"
+  );
+  [low, high] = alignSlotBounds(low, high);
+  low = Math.max(low, listStart);
+  if (isToday) low = Math.max(low, TL.nextOpen(nowMin, listStart));
+  high = Math.min(high, listEnd);
+  return [low, high];
+};
+
+export const pickTapSlot = (
+  room,
+  minute,
+  { isToday = false, nowMin = 0, duration = 60, listStart = 0, listEnd = DAY_MIN } = {}
+) => {
+  const [low, high] = slotWindow(room, minute, {
+    isToday,
+    nowMin,
+    listStart,
+    listEnd
+  });
+  if (high - low < SNAP_MIN) return null;
+  const start = Math.max(low, minute);
+  if (start >= high) return null;
+  const end = Math.min(high, start + duration);
+  if (end - start < SNAP_MIN) return null;
+  return { start, end };
+};
+
+export const extendSlotEnd = (
+  room,
+  start,
+  durationMin,
+  { isToday = false, nowMin = 0, listEnd = LIST_END } = {}
+) => {
+  const [, high] = slotWindow(room, start, {
+    isToday,
+    nowMin,
+    listStart: start,
+    listEnd
+  });
+  const end = Math.min(high, start + durationMin);
+  if (end - start < SNAP_MIN) return null;
+  return end;
+};
+
+export const availableDurations = (
+  room,
+  start,
+  durations = [30, 60, 120],
+  { isToday = false, nowMin = 0, listEnd = LIST_END } = {}
+) => {
+  const [, high] = slotWindow(room, start, {
+    isToday,
+    nowMin,
+    listStart: start,
+    listEnd
+  });
+  return durations.filter((min) => start + min <= high);
 };

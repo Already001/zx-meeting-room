@@ -11,12 +11,17 @@
     "build:server": "pnpm -F @meeting/server run build",
     "build": "pnpm run build:server && pnpm run build:web",
     "build:prod": "pnpm run build:server && pnpm -F @meeting/web run build:prod",
+    "test": "pnpm -F @meeting/server test && pnpm -F @meeting/web test",
+    "typecheck": "pnpm -F @meeting/server exec tsc --noEmit && pnpm -F @meeting/web run typecheck",
     "format": "pnpm -F @meeting/web run format"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
   },
   "packageManager": "pnpm@10.22.0",
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3"]
+  },
   "volta": {
     "node": "22.16.0",
     "pnpm": "10.22.0"

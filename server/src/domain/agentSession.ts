@@ -14,6 +14,7 @@ type Session = {
   sessionId: string;
   issued: Map<string, FreeSlot>;
   drafts: Map<string, DraftEntry>;
+  pendingTitle: string;
   exp: number;
 };
 
@@ -72,6 +73,7 @@ export function createAgentSessionStore(opts?: { ttlMs?: number; now?: () => num
           sessionId,
           issued: new Map(),
           drafts: new Map(),
+          pendingTitle: "",
           exp: now() + ttlMs
         };
         sessions.set(userId, session);
@@ -88,9 +90,22 @@ export function createAgentSessionStore(opts?: { ttlMs?: number; now?: () => num
         sessionId: id,
         issued: new Map(),
         drafts: new Map(),
+        pendingTitle: "",
         exp: now() + ttlMs
       });
       return { sessionId: id };
+    },
+
+    rememberTitle(userId: string, sessionId: string, title: string): void {
+      const session = getSession(userId, sessionId);
+      if (!session) return;
+      session.pendingTitle = title.trim().slice(0, 50);
+      touchSession(session);
+    },
+
+    peekTitle(userId: string, sessionId: string): string {
+      const session = getSession(userId, sessionId);
+      return session?.pendingTitle ?? "";
     },
 
     rememberSlots(userId: string, sessionId: string, slots: FreeSlot[]): void {

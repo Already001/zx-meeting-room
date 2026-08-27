@@ -27,7 +27,7 @@
     </dl>
     <div class="ai-buddy-card-actions">
       <button type="button" class="ai-buddy-btn-ghost" @click="emit('cancel')">
-        取消
+        返回
       </button>
       <button
         type="button"
@@ -53,7 +53,7 @@ const title = ref(props.draft?.title || "");
 const slot = computed(() => props.draft?.slot || {});
 
 watch(
-  () => props.draft?.draftId,
+  () => [props.draft?.draftId, props.draft?.title],
   () => {
     title.value = props.draft?.title || "";
   }

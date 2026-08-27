@@ -30,7 +30,13 @@
         aria-label="更多"
         @click="showMore = true"
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
           <circle cx="6" cy="12" r="1.7" />
           <circle cx="12" cy="12" r="1.7" />
           <circle cx="18" cy="12" r="1.7" />
@@ -55,11 +61,7 @@
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <input
-            v-model="keyword"
-            type="search"
-            placeholder="搜索会议室"
-          />
+          <input v-model="keyword" type="search" placeholder="搜索会议室" />
         </label>
 
         <div class="m-home-filters">
@@ -133,7 +135,11 @@
               </svg>
             </button>
           </div>
-          <button type="button" class="m-filter-reset" @click="resetHomeFilters">
+          <button
+            type="button"
+            class="m-filter-reset"
+            @click="resetHomeFilters"
+          >
             重置
           </button>
         </div>
@@ -215,6 +221,15 @@
       :bookings="mine.items.value"
       @close="mine.open.value = false"
       @release="onRelease"
+      @edit="onEdit"
+    />
+    <EditScheduleModal
+      v-if="editing"
+      :booking="editing"
+      :rooms="rooms"
+      :full-screen="true"
+      @close="editing = null"
+      @success="handleEditSuccess"
     />
 
     <ConfirmSheet
@@ -232,20 +247,17 @@
 <script setup>
 import { computed, ref } from "vue";
 import { releaseBooking } from "@/server/module/booking";
-import {
-  getUserId,
-  showToastError,
-  showToastSuccess
-} from "@/utils";
+import { getUserId, showToastError, showToastSuccess } from "@/utils";
 import { useBoard } from "./useBoard";
 import { useMine } from "./useMine";
-import { clipOpen, fromMinutes, shanghaiToday, TL } from "./time";
+import { extendSlotEnd, fromMinutes, shanghaiToday } from "./time";
 import MobileRoomList from "./components/MobileRoomList.vue";
 import MobileSelectionBar from "./components/MobileSelectionBar.vue";
 import MobileDateSheet from "./components/MobileDateSheet.vue";
 import MobileFilterSheet from "./components/MobileFilterSheet.vue";
 import MobileMoreSheet from "./components/MobileMoreSheet.vue";
 import CreateScheduleModal from "./components/CreateScheduleModal.vue";
+import EditScheduleModal from "./components/EditScheduleModal.vue";
 import MyBookingsModal from "./components/MyBookingsModal.vue";
 import RoomDetailModal from "./components/RoomDetailModal.vue";
 import OccupancySheet from "./components/OccupancySheet.vue";
@@ -264,6 +276,7 @@ const {
   selection,
   facilityOptions,
   places,
+  rooms,
   visibleRooms,
   reload
 } = board;
@@ -274,6 +287,7 @@ const detailRoom = ref(null);
 const occupancy = ref(null);
 const bookingRoom = ref(null);
 const bookingRange = ref(null);
+const editing = ref(null);
 const confirmPayload = ref(null);
 
 const dateChip = computed(() => {
@@ -290,7 +304,9 @@ const isToday = computed(() => boardDate.value === shanghaiToday());
 
 const selectedRoom = computed(() => {
   if (!selection.value) return null;
-  return visibleRooms.value.find((r) => r.id === selection.value.roomId) || null;
+  return (
+    visibleRooms.value.find((r) => r.id === selection.value.roomId) || null
+  );
 });
 
 const onNotice = (msg) => {
@@ -333,18 +349,16 @@ const openBookingFromSelection = () => {
 
 const handleQuickDuration = (minutes) => {
   if (!selection.value || !selectedRoom.value) return;
-  const anchor = Math.floor((selection.value.start + selection.value.end) / 2);
-  let [, high] = TL.freeBounds(selectedRoom.value.busyEvents || [], anchor);
-  [, high] = clipOpen(
-    0,
-    high,
-    selectedRoom.value.openStart || "00:00",
-    selectedRoom.value.openEnd || "24:00"
+  const end = extendSlotEnd(
+    selectedRoom.value,
+    selection.value.start,
+    minutes,
+    { isToday: isToday.value }
   );
-  const cappedHigh = Math.min(high, TL.LIST_END);
+  if (end == null) return;
   selection.value = {
     ...selection.value,
-    end: Math.min(cappedHigh, selection.value.start + minutes)
+    end
   };
 };
 
@@ -353,12 +367,24 @@ const closeBooking = () => {
   bookingRange.value = null;
 };
 
-const handleBookingSuccess = async () => {
+const handleBookingSuccess = async (count = 1) => {
   closeBooking();
   detailRoom.value = null;
   selection.value = null;
-  showToastSuccess("预定成功，已加入「我的预定」");
+  showToastSuccess(
+    count > 1 ? `已预定 ${count} 场，可在「我的预定」查看` : "预定成功，已加入「我的预定」"
+  );
   mine.open.value = true;
+  await Promise.all([reload(), mine.reload()]);
+};
+
+const onEdit = (booking) => {
+  editing.value = booking;
+};
+
+const handleEditSuccess = async () => {
+  editing.value = null;
+  showToastSuccess("预定已更新");
   await Promise.all([reload(), mine.reload()]);
 };
 

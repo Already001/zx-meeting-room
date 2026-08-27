@@ -27,11 +27,8 @@
               <div class="booking-row-main">
                 <div class="booking-row-head">
                   <span class="booking-row-title">{{ b.title }}</span>
-                  <span
-                    class="room-status-badge"
-                    :class="b.status === 'ongoing' ? 'ongoing' : 'upcoming'"
-                  >
-                    {{ b.status === "ongoing" ? "进行中" : "待开始" }}
+                  <span class="room-status-badge" :class="b.status">
+                    {{ statusLabel(b.status) }}
                   </span>
                 </div>
                 <div class="booking-row-meta">
@@ -41,13 +38,24 @@
                   {{ b.roomName }}（{{ b.buildingName }} {{ b.floorName }}）
                 </div>
               </div>
-              <button
-                type="button"
-                class="booking-release"
-                @click="emit('release', b)"
-              >
-                释放
-              </button>
+              <div class="booking-row-actions">
+                <button
+                  v-if="canChangeBooking(b.status)"
+                  type="button"
+                  class="booking-edit"
+                  @click="emit('edit', b)"
+                >
+                  修改
+                </button>
+                <button
+                  v-if="canChangeBooking(b.status)"
+                  type="button"
+                  class="booking-release"
+                  @click="emit('release', b)"
+                >
+                  释放
+                </button>
+              </div>
             </li>
           </ul>
         </div>
@@ -58,12 +66,15 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount } from "vue";
+import { canChangeBooking, MINE_STATUS_LABEL } from "../mine";
 
 defineProps({
   bookings: { type: Array, default: () => [] }
 });
 
-const emit = defineEmits(["close", "release"]);
+const emit = defineEmits(["close", "release", "edit"]);
+
+const statusLabel = (status) => MINE_STATUS_LABEL[status] || status;
 
 const onKey = (event) => {
   if (event.key === "Escape") emit("close");

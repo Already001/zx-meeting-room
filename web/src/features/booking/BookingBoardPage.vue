@@ -58,10 +58,19 @@
       @success="handleBookingSuccess"
     />
     <MyBookingsModal
-      v-if="mine.open"
+      v-if="mine.open.value"
       :bookings="mine.items.value"
       @close="closeMine"
       @release="onRelease"
+      @edit="onEdit"
+    />
+    <EditScheduleModal
+      v-if="editing"
+      :booking="editing"
+      :rooms="rooms"
+      :full-screen="false"
+      @close="editing = null"
+      @success="handleEditSuccess"
     />
     <AiBuddyFab @booked="reload" />
   </div>
@@ -71,17 +80,14 @@
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { getMe } from "@/server/module/me";
-import {
-  getUserId,
-  showToastError,
-  showToastSuccess
-} from "@/utils";
+import { getUserId, showToastError, showToastSuccess } from "@/utils";
 import { useBoard } from "./useBoard";
 import { useMine } from "./useMine";
 import { fromMinutes, shanghaiToday } from "./time";
 import PcToolbar from "./components/PcToolbar.vue";
 import PcTimelineBoard from "./components/PcTimelineBoard.vue";
 import CreateScheduleModal from "./components/CreateScheduleModal.vue";
+import EditScheduleModal from "./components/EditScheduleModal.vue";
 import MyBookingsModal from "./components/MyBookingsModal.vue";
 import RoomDetailModal from "./components/RoomDetailModal.vue";
 import AiBuddyFab from "./components/AiBuddyFab.vue";
@@ -94,6 +100,7 @@ const showLegend = ref(false);
 const detailRoom = ref(null);
 const bookingRoom = ref(null);
 const bookingRange = ref(null);
+const editing = ref(null);
 
 const board = useBoard();
 const mine = useMine();
@@ -107,6 +114,7 @@ const {
   selection,
   facilityOptions,
   places,
+  rooms,
   visibleRooms,
   reload
 } = board;
@@ -198,12 +206,24 @@ const closeBooking = () => {
   bookingRange.value = null;
 };
 
-const handleBookingSuccess = async () => {
+const handleBookingSuccess = async (count = 1) => {
   closeBooking();
   detailRoom.value = null;
   selection.value = null;
-  showToastSuccess("预定成功，已加入「我的预定」");
+  showToastSuccess(
+    count > 1 ? `已预定 ${count} 场，可在「我的预定」查看` : "预定成功，已加入「我的预定」"
+  );
   mine.open.value = true;
+  await Promise.all([reload(), mine.reload()]);
+};
+
+const onEdit = (booking) => {
+  editing.value = booking;
+};
+
+const handleEditSuccess = async () => {
+  editing.value = null;
+  showToastSuccess("预定已更新");
   await Promise.all([reload(), mine.reload()]);
 };
 

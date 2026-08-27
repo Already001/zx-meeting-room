@@ -89,7 +89,7 @@
             v-else-if="ui.card?.type === 'confirm'"
             :draft="ui.card.draft"
             @confirm="confirmDraft"
-            @cancel="dismiss"
+            @cancel="goBack"
           />
           <article
             v-else-if="ui.card?.type === 'suggest'"
@@ -98,14 +98,19 @@
             <h3 class="ai-buddy-card-title">换个时间？</h3>
             <p class="ai-buddy-card-copy">{{ ui.card.reason }}</p>
             <div class="ai-buddy-slot-btns">
+              <p class="ai-buddy-slot-hint">点选一个时段</p>
               <button
                 v-for="opt in ui.card.options"
                 :key="`${opt.roomId}-${opt.date}-${opt.start}-${opt.end}`"
                 type="button"
                 class="ai-buddy-slot-btn"
+                :aria-label="`选择 ${opt.roomName} ${opt.start} 到 ${opt.end}`"
                 @click="pickSlot(opt)"
               >
-                {{ opt.roomName }} {{ opt.date }} {{ opt.start }}-{{ opt.end }}
+                <span class="ai-buddy-slot-time"
+                  >{{ opt.roomName }} {{ opt.start }}–{{ opt.end }}</span
+                >
+                <span class="ai-buddy-slot-cta">选这个</span>
               </button>
             </div>
           </article>
@@ -124,13 +129,35 @@
         </div>
       </div>
 
+      <div
+        v-if="!ui.card && !ui.status && suggestions.length"
+        class="ai-buddy-prompts"
+        aria-label="快捷会议建议"
+      >
+        <button
+          v-for="suggestion in suggestions"
+          :key="suggestion.id"
+          type="button"
+          class="ai-buddy-prompt"
+          :disabled="sending"
+          :aria-label="
+            suggestion.source === 'history'
+              ? `根据历史预订推荐：${suggestion.label}`
+              : suggestion.label
+          "
+          @click="sendSuggestion(suggestion)"
+        >
+          {{ suggestion.label }}
+        </button>
+      </div>
+
       <form class="ai-buddy-composer" @submit.prevent="sendMessage">
         <input
           ref="inputRef"
           v-model="draftText"
           type="text"
           maxlength="200"
-          placeholder="找空房、订一小时…"
+          placeholder="告诉我时间和人数，帮你找会议室"
           :disabled="sending"
           aria-label="对助手说"
         />
@@ -139,15 +166,24 @@
         </button>
       </form>
     </div>
+    <AgentDebugPanel
+      v-if="debugEnabled"
+      :entries="debugEntries"
+      @clear="debugEntries = []"
+    />
   </Teleport>
 </template>
 
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { getAgentSuggestions } from "@/server/module/agent";
 import { showToastSuccess } from "@/utils";
-import { applyAgentEvent, emptyAgentUi } from "../agent/applyEvent";
+import { applyAgentEvent, backFromConfirm, emptyAgentUi } from "../agent/applyEvent";
+import { appendDebugEntry, readDebugEnabled, writeDebugEnabled } from "../agent/debugLog";
 import { streamTurn } from "../agent/streamTurn";
+import { buildSuggestionTurnBody } from "../agent/suggestions";
 import AgentConfirmCard from "./AgentConfirmCard.vue";
+import AgentDebugPanel from "./AgentDebugPanel.vue";
 import AgentQueryCard from "./AgentQueryCard.vue";
 
 defineProps({
@@ -167,6 +203,10 @@ const dockOpen = ref(false);
 const draftText = ref("");
 const sending = ref(false);
 const ui = ref(emptyAgentUi());
+const debugEnabled = ref(false);
+const debugEntries = ref([]);
+const suggestions = ref([]);
+const suggestionsLoaded = ref(false);
 
 let raf = 0;
 let last = 0;
@@ -186,11 +226,52 @@ let idleTimer = 0;
 /** @type {AbortController | null} */
 let turnAbort = null;
 let turnGen = 0;
+let suggestionsGeneration = 0;
+
+function pushClientDebug(cat, title, data) {
+  debugEntries.value = appendDebugEntry(
+    {
+      id: crypto.randomUUID(),
+      ts: Date.now(),
+      cat,
+      title,
+      data
+    },
+    debugEntries.value
+  );
+}
+
+function onHotkey(event) {
+  if (!(event.altKey && event.shiftKey && event.code === "KeyD")) return;
+  event.preventDefault();
+  debugEnabled.value = !debugEnabled.value;
+  writeDebugEnabled(debugEnabled.value);
+}
 
 function abortInFlightTurn() {
   if (turnAbort) {
     turnAbort.abort();
     turnAbort = null;
+  }
+}
+
+function clearSuggestions() {
+  suggestionsGeneration += 1;
+  suggestions.value = [];
+  suggestionsLoaded.value = false;
+}
+
+async function loadSuggestions() {
+  const gen = ++suggestionsGeneration;
+  suggestionsLoaded.value = false;
+  try {
+    const list = await getAgentSuggestions();
+    if (gen !== suggestionsGeneration || !dockOpen.value) return;
+    suggestions.value = Array.isArray(list) ? list : [];
+  } catch {
+    if (gen === suggestionsGeneration) suggestions.value = [];
+  } finally {
+    if (gen === suggestionsGeneration) suggestionsLoaded.value = true;
   }
 }
 
@@ -307,6 +388,7 @@ function toggle() {
   const sessionId = ui.value.sessionId;
   ui.value = { ...emptyAgentUi(), sessionId };
   dockOpen.value = true;
+  loadSuggestions();
 }
 
 /**
@@ -315,8 +397,13 @@ function toggle() {
  */
 function onEvent(event, gen) {
   if (gen !== turnGen) return;
+  if (event.type === "debug" && event.entry) {
+    debugEntries.value = appendDebugEntry(event.entry, debugEntries.value);
+    return;
+  }
   ui.value = applyAgentEvent(ui.value, event);
   if (event.type === "booked") {
+    clearSuggestions();
     showToastSuccess("预定成功");
     emit("booked");
     dockOpen.value = false;
@@ -324,6 +411,7 @@ function onEvent(event, gen) {
     return;
   }
   if (event.type === "closed") {
+    clearSuggestions();
     dockOpen.value = false;
     scheduleIdle();
     return;
@@ -350,6 +438,10 @@ async function runTurn(body) {
       code: err.code,
       expression: "sorry"
     });
+    pushClientDebug("error", "前端请求失败", {
+      msg: err.msg || err.message,
+      code: err.code
+    });
     dockOpen.value = true;
   } finally {
     if (turnAbort === ac) turnAbort = null;
@@ -361,6 +453,15 @@ function sendMessage() {
   const message = draftText.value.trim();
   if (!message || sending.value) return;
   draftText.value = "";
+  startMessageTurn({
+    ...(ui.value.sessionId ? { sessionId: ui.value.sessionId } : {}),
+    action: "message",
+    message
+  });
+}
+
+function startMessageTurn(body) {
+  suggestions.value = [];
   ui.value = {
     ...ui.value,
     open: true,
@@ -368,12 +469,12 @@ function sendMessage() {
     expression: "focus"
   };
   dockOpen.value = true;
-  const sessionId = ui.value.sessionId;
-  runTurn({
-    ...(sessionId ? { sessionId } : {}),
-    action: "message",
-    message
-  });
+  runTurn(body);
+}
+
+function sendSuggestion(suggestion) {
+  if (sending.value || !suggestion?.message) return;
+  startMessageTurn(buildSuggestionTurnBody(suggestion, ui.value.sessionId));
 }
 
 function pickSlot(slot) {
@@ -396,8 +497,15 @@ function confirmDraft(title) {
   });
 }
 
+function goBack() {
+  abortInFlightTurn();
+  ui.value = backFromConfirm(ui.value);
+  dockOpen.value = true;
+}
+
 function dismiss() {
   abortInFlightTurn();
+  clearSuggestions();
   const sessionId = ui.value.sessionId;
   ui.value = applyAgentEvent(ui.value, {
     type: "closed",
@@ -424,18 +532,22 @@ function dismiss() {
 }
 
 onMounted(() => {
+  debugEnabled.value = readDebugEnabled();
   reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   document.addEventListener("pointerleave", onPointerLeave);
+  window.addEventListener("keydown", onHotkey);
   raf = requestAnimationFrame(loop);
 });
 
 onBeforeUnmount(() => {
   abortInFlightTurn();
+  clearSuggestions();
   turnGen += 1;
   cancelAnimationFrame(raf);
   window.clearTimeout(idleTimer);
   window.removeEventListener("pointermove", onPointerMove);
   document.removeEventListener("pointerleave", onPointerLeave);
+  window.removeEventListener("keydown", onHotkey);
 });
 </script>

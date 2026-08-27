@@ -66,6 +66,27 @@ const contentOnlyResponse = (content: string) =>
     { status: 200, headers: { "Content-Type": "application/json" } }
   );
 
+test("createOpenAiLlm debug entries increment loop round per complete", async () => {
+  const logs: Array<{ round?: number; cat: string; title: string }> = [];
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    onDebug: (entry) => logs.push(entry),
+    fetchImpl: async () => searchToolResponse({ date: "2026-08-27", durationMin: 60 })
+  });
+
+  await llm.complete({ userText: "今天下午一小时" });
+  await llm.complete({ userText: "再查一次" });
+
+  const first = logs.filter((e) => e.round === 1);
+  const second = logs.filter((e) => e.round === 2);
+  assert.ok(first.length >= 1);
+  assert.ok(second.length >= 1);
+  assert.ok(first.some((e) => e.cat === "http"));
+  assert.ok(second.some((e) => e.cat === "search"));
+});
+
 test("createOpenAiLlm parses search_availability tool call", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const llm = createOpenAiLlm({
@@ -90,6 +111,48 @@ test("createOpenAiLlm parses search_availability tool call", async () => {
   assert.equal(body.messages[1].content, "今天下午一小时");
 });
 
+test("createOpenAiLlm coerces ISO window times in tool args", async () => {
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async () =>
+      searchToolResponse({
+        date: "2025-06-18T14:00",
+        windowStart: "2025-06-18T14:00",
+        windowEnd: "2025-06-18T16:00",
+        durationMin: 60
+      })
+  });
+
+  const decision = await llm.complete({ userText: "下午两点" });
+  assert.deepEqual(decision, {
+    kind: "search",
+    args: {
+      date: "2025-06-18",
+      windowStart: "14:00",
+      windowEnd: "16:00",
+      durationMin: 60
+    }
+  });
+});
+
+test("createOpenAiLlm does not nest /v1 under already-versioned base URL", async () => {
+  const calls: string[] = [];
+  const llm = createOpenAiLlm({
+    baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4",
+    apiKey: "sk-test",
+    model: "glm-test",
+    fetchImpl: async (url) => {
+      calls.push(String(url));
+      return contentOnlyResponse("还要几点");
+    }
+  });
+
+  await llm.complete({ userText: "查空档" });
+  assert.equal(calls[0], "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions");
+});
+
 test("createOpenAiLlm returns need_more when no tool call", async () => {
   const llm = createOpenAiLlm({
     baseUrl: "https://llm.example",
@@ -102,7 +165,7 @@ test("createOpenAiLlm returns need_more when no tool call", async () => {
   assert.deepEqual(decision, { kind: "need_more", text: "还要几点" });
 });
 
-test("createOpenAiLlm fetch uses a 20s abort signal", async () => {
+test("createOpenAiLlm fetch uses an abort signal", async () => {
   let signal: AbortSignal | undefined;
   const llm = createOpenAiLlm({
     baseUrl: "https://llm.example",
@@ -194,6 +257,50 @@ test("handleTurn message with need_more content returns puzzled need_more", asyn
   assert.equal(bookingCount(db), 0);
   const needMore = events.find((e) => e.type === "need_more");
   assert.deepEqual(needMore, { type: "need_more", text: "还要几点", expression: "puzzled" });
+});
+
+test("pick_slot after themed search pre-fills confirm title 面试", async () => {
+  const { db } = setup();
+  const store = createAgentSessionStore();
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async () =>
+      searchToolResponse({
+        date: "2026-08-27",
+        durationMin: 30,
+        roomName: "1号"
+      })
+  });
+
+  const queried = await handleTurn({
+    db,
+    corpId: CORP,
+    user: host,
+    body: { action: "message", message: "一号 现在 半小时 面试" },
+    store,
+    now: FROZEN,
+    llm
+  });
+  const query = queried.find((e) => e.type === "query");
+  assert.ok(query?.type === "query");
+  const sessionId = queried.find((e) => e.type === "session")?.sessionId;
+  const slot = query.rooms[0]?.slots[0];
+  assert.ok(sessionId);
+  assert.ok(slot);
+
+  const picked = await handleTurn({
+    db,
+    corpId: CORP,
+    user: host,
+    body: { sessionId, action: "pick_slot", slot },
+    store,
+    now: FROZEN
+  });
+  const confirm = picked.find((e) => e.type === "confirm");
+  assert.ok(confirm?.type === "confirm");
+  assert.equal(confirm.draft.title, "面试");
 });
 
 test("handleTurn message with booking intent and single slot still returns query", async () => {

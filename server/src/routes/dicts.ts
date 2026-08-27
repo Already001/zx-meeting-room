@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { getDb } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { requireAdmin } from "../middleware/user.js";
 import {
@@ -9,11 +8,11 @@ import {
   setDictEnabled,
   updateDict
 } from "../domain/dict.js";
-import type { DictType } from "../types.js";
+import type { AppVars, DictType } from "../types.js";
 
-type Vars = { corpId: string; userId: string; userName: string; dept: string };
-const dicts = new Hono<{ Variables: Vars }>();
-dicts.use("*", requireAdmin);
+const dicts = new Hono<{ Variables: AppVars }>();
+dicts.use("/dicts", requireAdmin);
+dicts.use("/dicts/*", requireAdmin);
 
 dicts.get("/dicts", (c) => {
   const corpId = c.get("corpId");
@@ -21,32 +20,32 @@ dicts.get("/dicts", (c) => {
   if (type && type !== "building" && type !== "facility") {
     return fail(c, "M4000", "type 无效");
   }
-  return ok(c, listDicts(getDb(), corpId, type));
+  return ok(c, listDicts(c.get("db"), corpId, type));
 });
 
 dicts.post("/dicts", async (c) => {
   const body = await c.req.json();
-  const res = createDict(getDb(), c.get("corpId"), body);
+  const res = createDict(c.get("db"), c.get("corpId"), body);
   if (!res.ok) return fail(c, res.code, res.msg);
   return ok(c, res.value);
 });
 
 dicts.put("/dicts/:id", async (c) => {
   const body = await c.req.json();
-  const res = updateDict(getDb(), c.get("corpId"), c.req.param("id"), body);
+  const res = updateDict(c.get("db"), c.get("corpId"), c.req.param("id"), body);
   if (!res.ok) return fail(c, res.code, res.msg);
   return ok(c, res.value);
 });
 
 dicts.put("/dicts/:id/enabled", async (c) => {
   const body = await c.req.json();
-  const res = setDictEnabled(getDb(), c.get("corpId"), c.req.param("id"), Boolean(body.enabled));
+  const res = setDictEnabled(c.get("db"), c.get("corpId"), c.req.param("id"), Boolean(body.enabled));
   if (!res.ok) return fail(c, res.code, res.msg);
   return ok(c, res.value);
 });
 
 dicts.delete("/dicts/:id", (c) => {
-  const res = deleteDict(getDb(), c.get("corpId"), c.req.param("id"));
+  const res = deleteDict(c.get("db"), c.get("corpId"), c.req.param("id"));
   if (!res.ok) return fail(c, res.code, res.msg);
   return ok(c, { ok: true });
 });

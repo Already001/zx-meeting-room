@@ -1,9 +1,11 @@
 import type Database from "better-sqlite3";
 import type { AgentSessionStore } from "./agentSession.js";
+import { emitDebug, makeDebug, type DebugSink } from "./agentDebug.js";
 import type { LlmPort } from "./agentLlm.js";
 import type { FreeSlot } from "./availability.js";
 import { searchAvailability } from "./availability.js";
 import { createBooking, getBoard, type BookingHost } from "./booking.js";
+import { extractMeetingTitle } from "./agentTitle.js";
 import { shanghaiNow, toMinutes } from "./time.js";
 
 export type MeetingBuddyExpression =
@@ -88,6 +90,7 @@ export type TurnInput = {
   store: AgentSessionStore;
   now?: { date: string; minute: number };
   llm?: LlmPort;
+  onDebug?: DebugSink;
 };
 
 const slotKey = (slot: Pick<FreeSlot, "roomId" | "date" | "start" | "end">): string =>
@@ -97,7 +100,7 @@ const durationMin = (slot: Pick<FreeSlot, "start" | "end">): number =>
   toMinutes(slot.end) - toMinutes(slot.start);
 
 export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
-  const { db, corpId, user, body, store, now = shanghaiNow(), llm } = input;
+  const { db, corpId, user, body, store, now = shanghaiNow(), llm, onDebug } = input;
   const action = parseTurnAction(body.action);
   if (action === null) {
     return [{ type: "error", msg: "请求无效", code: "M4000", expression: "sorry" }];
@@ -126,14 +129,15 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
         events.push({ type: "error", msg: "请选择助手给出的时段", expression: "sorry" });
         break;
       }
-      const drafted = store.putDraft(user.userId, sessionId, slot, "");
+      const title = store.peekTitle(user.userId, sessionId);
+      const drafted = store.putDraft(user.userId, sessionId, slot, title);
       if (!drafted) {
         events.push({ type: "error", msg: "请选择助手给出的时段", expression: "sorry" });
         break;
       }
       events.push({
         type: "confirm",
-        draft: { draftId: drafted.draftId, slot, title: "" },
+        draft: { draftId: drafted.draftId, slot, title },
         expression: "expect"
       });
       break;
@@ -141,7 +145,7 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
     case "confirm": {
       const draftId = body.draftId;
       const draft = draftId ? store.getDraft(user.userId, draftId) : null;
-      if (!draft || draft.sessionId !== sessionId) {
+      if (!draftId || !draft || draft.sessionId !== sessionId) {
         events.push({ type: "error", msg: "确认已过期，请重新选择", expression: "sorry" });
         break;
       }
@@ -238,6 +242,16 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
             now
           );
 
+          emitDebug(
+            onDebug,
+            makeDebug("search", "空档结果", {
+              date,
+              heading: search.heading,
+              roomCount: search.rooms.length,
+              slotCount: search.rooms.reduce((n, r) => n + r.slots.length, 0)
+            }, 1)
+          );
+
           if (search.rooms.length === 0) {
             events.push({
               type: "need_more",
@@ -249,6 +263,11 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
 
           const allSlots = search.rooms.flatMap((room) => room.slots);
           store.rememberSlots(user.userId, sessionId, allSlots);
+          store.rememberTitle(
+            user.userId,
+            sessionId,
+            extractMeetingTitle(message, decision.args.title)
+          );
           events.push({
             type: "query",
             heading: search.heading,
@@ -257,7 +276,11 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
           });
           break;
         }
-      } catch {
+      } catch (err) {
+        emitDebug(
+          onDebug,
+          makeDebug("error", "回合异常", err instanceof Error ? err.message : String(err))
+        );
         events.push({ type: "error", msg: "助手暂时不可用", expression: "sorry" });
       }
       break;

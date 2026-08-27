@@ -27,7 +27,7 @@
           v-for="item in navItems"
           :key="item.id"
           type="button"
-          class="relative w-full h-44px flex flex-col items-center justify-center gap-2px border-none cursor-pointer text-10px leading-16px"
+          class="relative w-full h-44px flex flex-col items-center justify-center gap-2px border-none cursor-pointer text-10px leading-16px whitespace-nowrap"
           :class="
             active === item.id
               ? 'bg-primaryLight text-primary'
@@ -55,6 +55,21 @@
             <path d="M3 3h18v18H3zM3 9h18M9 21V9" />
           </svg>
           <svg
+            v-else-if="item.id === 'history'"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <svg
             v-else
             width="18"
             height="18"
@@ -78,7 +93,7 @@
     </aside>
     <div class="flex-1 min-w-0 min-h-0 flex flex-col">
       <header
-        class="h-48px shrink-0 bg-canvas border-b border-edge flex items-center px-20px text-16px font-500 leading-24px text-black"
+        class="h-48px shrink-0 bg-canvas border-b border-edge flex items-center px-20px text-16px font-500 leading-24px text-black whitespace-nowrap overflow-hidden text-ellipsis"
       >
         智信 · 智能会议室管理平台
       </header>
@@ -98,7 +113,8 @@ defineProps({
   active: {
     type: String,
     required: true,
-    validator: (value) => value === "rooms" || value === "dicts"
+    validator: (value) =>
+      value === "rooms" || value === "dicts" || value === "history"
   }
 });
 
@@ -106,6 +122,7 @@ const router = useRouter();
 
 const navItems = [
   { id: "rooms", label: "会议室", path: "/admin" },
+  { id: "history", label: "记录", path: "/admin/history" },
   { id: "dicts", label: "字典表", path: "/admin/dicts" }
 ];
 </script>

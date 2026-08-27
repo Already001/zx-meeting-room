@@ -205,8 +205,15 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { clipOpen, fromMinutes, toMinutes, TL } from "../time";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from "vue";
+import { fromMinutes, toMinutes, slotWindow, TL } from "../time";
 
 const props = defineProps({
   rooms: { type: Array, default: () => [] },
@@ -297,24 +304,19 @@ const handlePointerDown = (room, e) => {
     return;
   }
 
-  let [low, high] = TL.freeBounds(room.busyEvents || [], anchor);
-  [low, high] = clipOpen(
-    low,
-    high,
-    room.openStart || "00:00",
-    room.openEnd || "24:00"
-  );
-  if (props.isToday) low = Math.max(low, TL.nextOpen(nowMin.value));
+  const [low, high] = slotWindow(room, anchor, {
+    isToday: props.isToday,
+    nowMin: nowMin.value
+  });
   if (high - low < TL.SNAP) {
     emit("notice", "剩余空闲不足 30 分钟");
     return;
   }
-  if (anchor < low || anchor >= high) {
+  const start = Math.max(low, anchor);
+  if (start >= high || high - start < TL.SNAP) {
     emit("notice", "剩余空闲不足 30 分钟");
     return;
   }
-
-  const start = Math.max(low, anchor);
   dragRef.value = { room, rect, anchor: start, low, high };
   lastSelection.value = {
     roomId: room.id,

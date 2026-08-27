@@ -52,6 +52,8 @@ const props = defineProps({
 defineEmits(["close"]);
 
 const hostText = computed(() =>
-  props.event.mine ? "我" : `${props.event.host} · ${props.event.dept || ""}`.replace(/ · $/, "")
+  props.event.mine
+    ? "我"
+    : `${props.event.host} · ${props.event.dept || ""}`.replace(/ · $/, "")
 );
 </script>

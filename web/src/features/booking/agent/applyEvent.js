@@ -7,6 +7,7 @@
  * @property {string} status
  * @property {string} expression
  * @property {AgentCard | null} card
+ * @property {AgentCard | null} backCard
  */
 
 /**
@@ -25,7 +26,8 @@ export function emptyAgentUi() {
     sessionId: "",
     status: "",
     expression: "idle",
-    card: null
+    card: null,
+    backCard: null
   };
 }
 
@@ -65,6 +67,10 @@ export function applyAgentEvent(state, event) {
         open: true,
         status: "",
         expression: event.expression,
+        backCard:
+          state.card?.type === "query" || state.card?.type === "suggest"
+            ? state.card
+            : state.backCard,
         card: { type: "confirm", draft: event.draft }
       };
 
@@ -109,6 +115,7 @@ export function applyAgentEvent(state, event) {
         open: false,
         status: "",
         card: null,
+        backCard: null,
         expression: "happy"
       };
 
@@ -118,10 +125,33 @@ export function applyAgentEvent(state, event) {
         open: false,
         status: "",
         card: null,
+        backCard: null,
         expression: "down"
       };
+
+    case "debug":
+      return state;
 
     default:
       return state;
   }
+}
+
+/** 确认卡取消：回到上一张空档/换档卡，不收起助手。 */
+export function backFromConfirm(state) {
+  if (state.card?.type !== "confirm") return state;
+  if (state.backCard) {
+    return {
+      ...state,
+      status: "",
+      expression: state.backCard.type === "suggest" ? "sorry" : "ease",
+      card: state.backCard
+    };
+  }
+  return {
+    ...state,
+    status: "",
+    expression: "idle",
+    card: null
+  };
 }

@@ -29,4 +29,17 @@ test("flushSseLines ignores non-data lines and [DONE]", () => {
 test("encodeHeaderValue percent-encodes Chinese for HTTP headers", () => {
   assert.equal(encodeHeaderValue("张三"), "%E5%BC%A0%E4%B8%89");
   assert.equal(encodeHeaderValue("u1"), "u1");
+  assert.equal(encodeHeaderValue(""), "");
+  assert.equal(encodeHeaderValue(), "");
+});
+
+test("flushSseLines skips broken JSON frames", () => {
+  const events = [];
+  flushSseLines(
+    'data: {not-json}\ndata: {"type":"closed","expression":"down"}\n',
+    (e) => events.push(e),
+    true
+  );
+  assert.equal(events.length, 1);
+  assert.equal(events[0].type, "closed");
 });

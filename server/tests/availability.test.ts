@@ -58,3 +58,49 @@ test("date beyond bookAheadDays skips room (超出可提前预定范围)", () =>
   const res = searchAvailability([room([])], { date: "2026-09-04", durationMin: 60 }, now);
   assert.equal(res.rooms.length, 0);
 });
+
+const numberedRoom = (): BoardRoom => ({
+  ...room([]),
+  id: "r-1",
+  name: "1号会议室",
+  buildingName: "奥城",
+  floorName: "7层"
+});
+
+test("roomName 一号 fuzzy-matches 1号会议室", () => {
+  const res = searchAvailability(
+    [room([]), numberedRoom()],
+    { date: "2026-08-27", durationMin: 60, roomName: "一号" },
+    now
+  );
+  assert.equal(res.rooms.length, 1);
+  assert.equal(res.rooms[0].roomName, "1号会议室");
+});
+
+test("buildingName 一号 is treated as room name when no such building", () => {
+  const res = searchAvailability(
+    [room([]), numberedRoom()],
+    { date: "2026-08-27", durationMin: 60, buildingName: "一号" },
+    now
+  );
+  assert.equal(res.rooms.length, 1);
+  assert.equal(res.rooms[0].roomName, "1号会议室");
+});
+
+test("buildingName 奥城 still matches the building", () => {
+  const res = searchAvailability(
+    [numberedRoom()],
+    { date: "2026-08-27", durationMin: 60, buildingName: "奥城" },
+    now
+  );
+  assert.equal(res.rooms.length, 1);
+});
+
+test("unknown buildingName with no room-name fallback stays empty", () => {
+  const res = searchAvailability(
+    [numberedRoom()],
+    { date: "2026-08-27", durationMin: 60, buildingName: "生态城" },
+    now
+  );
+  assert.equal(res.rooms.length, 0);
+});

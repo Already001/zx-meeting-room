@@ -2,7 +2,9 @@
   <div v-if="room && selection" class="m-select-bar">
     <div class="m-select-room">{{ room.name }}</div>
     <div class="m-select-time">
-      {{ dateText }} {{ fromMinutes(selection.start) }}-{{ fromMinutes(selection.end) }}
+      {{ dateText }} {{ fromMinutes(selection.start) }}-{{
+        fromMinutes(selection.end)
+      }}
       <span class="m-select-dur"
         >共 {{ TL.duration(selection.start, selection.end) }}</span
       >
@@ -34,7 +36,7 @@
 
 <script setup>
 import { computed } from "vue";
-import { clipOpen, fromMinutes, TL } from "../time";
+import { availableDurations, fromMinutes, TL } from "../time";
 
 const props = defineProps({
   room: { type: Object, default: null },
@@ -46,17 +48,6 @@ defineEmits(["cancel", "book", "quickDuration"]);
 
 const quickOptions = computed(() => {
   if (!props.room || !props.selection) return [];
-  const anchor = Math.floor((props.selection.start + props.selection.end) / 2);
-  let [, high] = TL.freeBounds(props.room.busyEvents || [], anchor);
-  [, high] = clipOpen(
-    0,
-    high,
-    props.room.openStart || "00:00",
-    props.room.openEnd || "24:00"
-  );
-  const cappedHigh = Math.min(high, TL.LIST_END);
-  return [30, 60, 120].filter(
-    (min) => props.selection.start + min <= cappedHigh
-  );
+  return availableDurations(props.room, props.selection.start);
 });
 </script>

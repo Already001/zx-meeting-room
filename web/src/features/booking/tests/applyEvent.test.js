@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { emptyAgentUi, applyAgentEvent } from "../agent/applyEvent.js";
+import { emptyAgentUi, applyAgentEvent, backFromConfirm } from "../agent/applyEvent.js";
 
 const queryEvent = {
   type: "query",
@@ -15,7 +15,8 @@ test("emptyAgentUi returns idle closed state", () => {
     sessionId: "",
     status: "",
     expression: "idle",
-    card: null
+    card: null,
+    backCard: null
   });
 });
 
@@ -142,4 +143,68 @@ test("closed collapses panel with down expression", () => {
   assert.equal(next.card, null);
   assert.equal(next.status, "");
   assert.equal(next.expression, "down");
+});
+
+test("debug event does not change ui state", () => {
+  const prev = applyAgentEvent(emptyAgentUi(), queryEvent);
+  const next = applyAgentEvent(prev, {
+    type: "debug",
+    entry: { id: "1", ts: 1, cat: "search", title: "x" }
+  });
+  assert.equal(next, prev);
+});
+
+test("confirm remembers query as backCard; backFromConfirm restores it", () => {
+  const withQuery = applyAgentEvent(emptyAgentUi(), queryEvent);
+  const withConfirm = applyAgentEvent(withQuery, {
+    type: "confirm",
+    draft: { draftId: "d1" },
+    expression: "expect"
+  });
+  assert.equal(withConfirm.card?.type, "confirm");
+  assert.deepEqual(withConfirm.backCard, {
+    type: "query",
+    heading: queryEvent.heading,
+    rooms: queryEvent.rooms
+  });
+
+  const back = backFromConfirm(withConfirm);
+  assert.equal(back.open, true);
+  assert.deepEqual(back.card, withConfirm.backCard);
+  assert.equal(back.expression, "ease");
+});
+
+test("unknown event type leaves state unchanged", () => {
+  const prev = emptyAgentUi();
+  const next = applyAgentEvent(prev, { type: "nope" });
+  assert.equal(next, prev);
+});
+
+test("backFromConfirm without backCard clears card and stays open", () => {
+  const confirm = applyAgentEvent(emptyAgentUi(), {
+    type: "confirm",
+    draft: { draftId: "d1" },
+    expression: "expect"
+  });
+  const back = backFromConfirm(confirm);
+  assert.equal(back.open, true);
+  assert.equal(back.card, null);
+  assert.equal(back.expression, "idle");
+});
+
+test("backFromConfirm from suggest uses sorry expression", () => {
+  const suggest = applyAgentEvent(emptyAgentUi(), {
+    type: "suggest",
+    reason: "占用",
+    options: [],
+    expression: "sorry"
+  });
+  const confirm = applyAgentEvent(suggest, {
+    type: "confirm",
+    draft: { draftId: "d1" },
+    expression: "expect"
+  });
+  const back = backFromConfirm(confirm);
+  assert.equal(back.expression, "sorry");
+  assert.equal(back.card?.type, "suggest");
 });

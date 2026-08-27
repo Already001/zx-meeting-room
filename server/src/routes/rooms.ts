@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { getDb } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { requireAdmin } from "../middleware/user.js";
 import {
@@ -9,10 +8,11 @@ import {
   setRoomEnabled,
   updateRoom
 } from "../domain/room.js";
+import type { AppVars } from "../types.js";
 
-type Vars = { corpId: string; userId: string; userName: string; dept: string };
-const rooms = new Hono<{ Variables: Vars }>();
-rooms.use("*", requireAdmin);
+const rooms = new Hono<{ Variables: AppVars }>();
+rooms.use("/rooms", requireAdmin);
+rooms.use("/rooms/*", requireAdmin);
 
 rooms.get("/rooms", (c) => {
   const corpId = c.get("corpId");
@@ -34,7 +34,7 @@ rooms.get("/rooms", (c) => {
   const pageSize = Number(c.req.query("pageSize"));
   return ok(
     c,
-    listRooms(getDb(), corpId, {
+    listRooms(c.get("db"), corpId, {
       keyword: keyword || undefined,
       enabled,
       buildingName: buildingName || undefined,
@@ -46,28 +46,28 @@ rooms.get("/rooms", (c) => {
 });
 
 rooms.get("/rooms/:id", (c) => {
-  const res = getRoom(getDb(), c.get("corpId"), c.req.param("id"));
+  const res = getRoom(c.get("db"), c.get("corpId"), c.req.param("id"));
   if (!res.ok) return fail(c, res.code, res.msg);
   return ok(c, res.value);
 });
 
 rooms.post("/rooms", async (c) => {
   const body = await c.req.json();
-  const res = createRoom(getDb(), c.get("corpId"), body);
+  const res = createRoom(c.get("db"), c.get("corpId"), body);
   if (!res.ok) return fail(c, res.code, res.msg);
   return ok(c, res.value);
 });
 
 rooms.put("/rooms/:id", async (c) => {
   const body = await c.req.json();
-  const res = updateRoom(getDb(), c.get("corpId"), c.req.param("id"), body);
+  const res = updateRoom(c.get("db"), c.get("corpId"), c.req.param("id"), body);
   if (!res.ok) return fail(c, res.code, res.msg);
   return ok(c, res.value);
 });
 
 rooms.put("/rooms/:id/enabled", async (c) => {
   const body = await c.req.json();
-  const res = setRoomEnabled(getDb(), c.get("corpId"), c.req.param("id"), Boolean(body.enabled));
+  const res = setRoomEnabled(c.get("db"), c.get("corpId"), c.req.param("id"), Boolean(body.enabled));
   if (!res.ok) return fail(c, res.code, res.msg);
   return ok(c, res.value);
 });

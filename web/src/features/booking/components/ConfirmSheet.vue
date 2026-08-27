@@ -6,7 +6,11 @@
           <strong>{{ title }}</strong>
           <span>{{ message }}</span>
         </div>
-        <button type="button" class="m-action-btn danger" @click="emit('confirm')">
+        <button
+          type="button"
+          class="m-action-btn danger"
+          @click="emit('confirm')"
+        >
           {{ confirmText }}
         </button>
         <button type="button" class="m-action-btn" @click="emit('cancel')">

@@ -63,9 +63,24 @@ export type BookingRecord = {
   hostUserId: string;
   hostUserName: string;
   hostDept: string;
+  seriesId: string | null;
   releasedAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type BookingAuditAction = "create" | "update" | "release";
+
+export type BookingAuditRecord = {
+  id: string;
+  corpId: string;
+  bookingId: string;
+  seriesId: string | null;
+  action: BookingAuditAction;
+  actorUserId: string;
+  actorUserName: string;
+  detail: Record<string, unknown> | null;
+  createdAt: string;
 };
 
 export type DomainOk<T> = { ok: true; value: T };

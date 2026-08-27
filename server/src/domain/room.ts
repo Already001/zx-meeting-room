@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { ensureDefaultDicts } from "../db.js";
+import { ensureDefaultDicts, parseFacilitiesJson } from "../db.js";
 import type { DomainResult, RoomPayload, RoomRecord } from "../types.js";
 import { parseHm } from "./time.js";
 
@@ -66,7 +66,7 @@ const toRecord = (row: RoomRow): RoomRecord => ({
   buildingName: row.building_name,
   floorName: row.floor_name,
   capacity: row.capacity,
-  facilities: JSON.parse(row.facilities) as string[],
+  facilities: parseFacilitiesJson(row.facilities),
   locationNote: row.location_note,
   openStart: row.open_start,
   openEnd: row.open_end,
@@ -323,7 +323,7 @@ export const updateRoom = (
   const n = normalizePayload(body, facilities.map((f) => f.name));
   const current = {
     buildingName: existing.building_name,
-    facilities: JSON.parse(existing.facilities) as string[]
+    facilities: parseFacilitiesJson(existing.facilities)
   };
   const checked = validateNormalized(n, buildings, facilities, current);
   if (!checked.ok) return checked;

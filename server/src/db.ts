@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   host_user_id TEXT NOT NULL,
   host_user_name TEXT NOT NULL,
   host_dept TEXT NOT NULL,
+  series_id TEXT,
   released_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -61,10 +62,41 @@ CREATE INDEX IF NOT EXISTS idx_rooms_corp ON rooms (corp_id, enabled, created_at
 CREATE INDEX IF NOT EXISTS idx_dicts_corp ON dicts (corp_id, type, sort);
 CREATE INDEX IF NOT EXISTS idx_bookings_room_date ON bookings (corp_id, room_id, date);
 CREATE INDEX IF NOT EXISTS idx_bookings_host ON bookings (corp_id, host_user_id);
+CREATE TABLE IF NOT EXISTS booking_audits (
+  id TEXT PRIMARY KEY,
+  corp_id TEXT NOT NULL,
+  booking_id TEXT NOT NULL,
+  series_id TEXT,
+  action TEXT NOT NULL,
+  actor_user_id TEXT NOT NULL,
+  actor_user_name TEXT NOT NULL,
+  detail TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audits_booking ON booking_audits (corp_id, booking_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audits_corp ON booking_audits (corp_id, created_at);
 `;
+
+export const parseFacilitiesJson = (raw: string): string[] => {
+  try {
+    const value = JSON.parse(raw) as unknown;
+    if (!Array.isArray(value)) return [];
+    return value.map((item) => String(item));
+  } catch {
+    return [];
+  }
+};
+
+const tableHasColumn = (db: Database.Database, table: string, column: string): boolean => {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  return rows.some((row) => row.name === column);
+};
 
 export const ensureSchema = (db: Database.Database) => {
   db.exec(SCHEMA);
+  if (!tableHasColumn(db, "bookings", "series_id")) {
+    db.exec("ALTER TABLE bookings ADD COLUMN series_id TEXT");
+  }
 };
 
 export const ensureDefaultDicts = (db: Database.Database, corpId: string) => {

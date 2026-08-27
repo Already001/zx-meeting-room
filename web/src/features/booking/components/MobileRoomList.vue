@@ -6,7 +6,11 @@
     </div>
     <article v-for="room in rooms" :key="room.id" class="m-room-card">
       <div class="m-room-head">
-        <button type="button" class="m-room-main" @click="emit('openRoom', room)">
+        <button
+          type="button"
+          class="m-room-main"
+          @click="emit('openRoom', room)"
+        >
           <span class="m-room-icon" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <rect
@@ -39,7 +43,9 @@
               <span v-if="room.favorite" class="m-room-badge">常用</span>
             </span>
             <span class="m-room-meta">
-              {{ room.capacity }}人&nbsp;&nbsp;{{ (room.facilities || []).join(" / ") }}
+              {{ room.capacity }}人&nbsp;&nbsp;{{
+                (room.facilities || []).join(" / ")
+              }}
             </span>
           </span>
         </button>
@@ -92,7 +98,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { clipOpen, toMinutes, TL } from "../time";
+import { pickTapSlot, toMinutes, TL } from "../time";
 
 const M_DEFAULT_DURATION = 60;
 
@@ -102,7 +108,12 @@ const props = defineProps({
   isToday: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(["update:selection", "tapEvent", "openRoom", "notice"]);
+const emit = defineEmits([
+  "update:selection",
+  "tapEvent",
+  "openRoom",
+  "notice"
+]);
 
 const shanghaiNowMinutes = () => {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -155,25 +166,17 @@ const handleTapTrack = (room, e) => {
     return;
   }
 
-  let [low, high] = TL.freeBounds(room.busyEvents || [], minute);
-  [low, high] = clipOpen(
-    low,
-    high,
-    room.openStart || "00:00",
-    room.openEnd || "24:00"
-  );
-  low = Math.max(
-    low,
-    TL.LIST_START,
-    props.isToday ? TL.nextOpen(nowMin.value, TL.LIST_START) : TL.LIST_START
-  );
-  high = Math.min(high, TL.LIST_END);
-  const start = Math.max(low, minute);
-  const end = Math.min(high, start + M_DEFAULT_DURATION);
-  if (end - start < TL.SNAP) {
+  const slot = pickTapSlot(room, minute, {
+    isToday: props.isToday,
+    nowMin: nowMin.value,
+    duration: M_DEFAULT_DURATION,
+    listStart: TL.LIST_START,
+    listEnd: TL.LIST_END
+  });
+  if (!slot) {
     emit("notice", "剩余空闲不足 30 分钟");
     return;
   }
-  emit("update:selection", { roomId: room.id, start, end });
+  emit("update:selection", { roomId: room.id, start: slot.start, end: slot.end });
 };
 </script>

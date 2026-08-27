@@ -22,7 +22,16 @@ export const parseHm = (hhmm: string): number | null => {
   return h * 60 + m;
 };
 
-export const isDate = (value: string): boolean => DATE.test(value);
+export const isDate = (value: string): boolean => {
+  if (!DATE.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  return (
+    utc.getUTCFullYear() === year &&
+    utc.getUTCMonth() === month - 1 &&
+    utc.getUTCDate() === day
+  );
+};
 
 export const shanghaiNow = (now = new Date()): { date: string; minute: number } => {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -48,6 +57,18 @@ export const addDays = (date: string, days: number): string => {
   const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(dt.getUTCDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
+};
+
+/** 含首尾：每周同一天，直到不超过 lastInclusive */
+export const weeklyDatesUntil = (start: string, lastInclusive: string): string[] => {
+  if (!isDate(start) || !isDate(lastInclusive) || start > lastInclusive) return [];
+  const dates: string[] = [];
+  let cursor = start;
+  while (cursor <= lastInclusive) {
+    dates.push(cursor);
+    cursor = addDays(cursor, 7);
+  }
+  return dates;
 };
 
 export const nextOpen = (nowMin: number): number =>

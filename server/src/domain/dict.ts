@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { ensureDefaultDicts } from "../db.js";
+import { ensureDefaultDicts, parseFacilitiesJson } from "../db.js";
 import type { DictRecord, DictType, DomainResult } from "../types.js";
 
 type DictRow = {
@@ -30,7 +30,7 @@ export const usageCount = (
       const rooms = db.prepare("SELECT facilities FROM rooms WHERE corp_id=?").all(corpId) as Array<{
         facilities: string;
       }>;
-      return rooms.filter((r) => (JSON.parse(r.facilities) as string[]).includes(name)).length;
+      return rooms.filter((r) => parseFacilitiesJson(r.facilities).includes(name)).length;
     }
     default: {
       const _exhaustive: never = type;
@@ -128,7 +128,7 @@ export const updateDict = (
         }>;
         const upd = db.prepare("UPDATE rooms SET facilities=? WHERE id=?");
         for (const r of rooms) {
-          const list = JSON.parse(r.facilities) as string[];
+          const list = parseFacilitiesJson(r.facilities);
           if (!list.includes(row.name)) continue;
           upd.run(JSON.stringify(list.map((x) => (x === row.name ? name : x))), r.id);
         }

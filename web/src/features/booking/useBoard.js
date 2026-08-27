@@ -1,5 +1,6 @@
 import { computed, ref, watch } from "vue";
 import { CAPACITY_OPTIONS } from "./constants";
+import { roomMatchesFilters, roomPlace } from "./filters";
 import { addDays, shanghaiToday } from "./time";
 import { getBoard } from "@/server/module/booking";
 import { showToastError } from "@/utils";
@@ -36,8 +37,6 @@ const buildDays = (baseIso, count) =>
     };
   });
 
-const roomPlace = (room) => `${room.buildingName} ${room.floorName}`;
-
 /**
  * 预定看板：日期轴、筛选、占用数据
  */
@@ -60,30 +59,9 @@ export const useBoard = () => {
   });
 
   const visibleRooms = computed(() =>
-    rooms.value.filter((room) => {
-      if (filters.value.place !== "all" && roomPlace(room) !== filters.value.place) {
-        return false;
-      }
-      if (filters.value.capacity !== "all") {
-        const option = CAPACITY_OPTIONS.find((c) => c.id === filters.value.capacity);
-        if (option && option.min !== undefined) {
-          if (room.capacity < option.min || room.capacity > option.max) return false;
-        }
-      }
-      if (
-        filters.value.facilities.length > 0 &&
-        !filters.value.facilities.every((f) => room.facilities.includes(f))
-      ) {
-        return false;
-      }
-      const q = keyword.value.trim().toLowerCase();
-      if (q) {
-        const hay =
-          `${room.name} ${room.buildingName} ${room.floorName}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    })
+    rooms.value.filter((room) =>
+      roomMatchesFilters(room, filters.value, keyword.value)
+    )
   );
 
   const reload = async () => {

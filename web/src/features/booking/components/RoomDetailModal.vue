@@ -96,11 +96,12 @@ const props = defineProps({
 
 defineEmits(["close", "book"]);
 
-const facilityText = computed(() =>
-  (props.room.facilities || []).join("、") || "无"
+const facilityText = computed(
+  () => (props.room.facilities || []).join("、") || "无"
 );
 
 const aheadLabel = computed(
-  () => AHEAD_LABEL[props.room.bookAheadDays] || `${props.room.bookAheadDays}天内`
+  () =>
+    AHEAD_LABEL[props.room.bookAheadDays] || `${props.room.bookAheadDays}天内`
 );
 </script>
