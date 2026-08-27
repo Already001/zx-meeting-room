@@ -20,8 +20,10 @@ function headerValue(value) {
 /**
  * @param {Record<string, unknown>} body
  * @param {(event: object) => void} onEvent
+ * @param {{ signal?: AbortSignal }} [options]
  */
-export async function streamTurn(body, onEvent) {
+export async function streamTurn(body, onEvent, options = {}) {
+  const { signal } = options;
   const token = getToken("access_token");
   /** @type {Record<string, string>} */
   const headers = {
@@ -36,7 +38,8 @@ export async function streamTurn(body, onEvent) {
   const res = await fetch(TURN_URL, {
     method: "POST",
     headers,
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal
   });
 
   const ctype = (res.headers.get("content-type") || "").toLowerCase();
@@ -52,23 +55,45 @@ export async function streamTurn(body, onEvent) {
     throw { msg: "助手暂时不可用", code: String(res.status) };
   }
 
-  await readSse(res.body, onEvent);
+  if (signal?.aborted) return;
+
+  await readSse(res.body, onEvent, signal);
 }
 
 /**
  * @param {ReadableStream<Uint8Array>} stream
  * @param {(event: object) => void} onEvent
+ * @param {AbortSignal | undefined} signal
  */
-async function readSse(stream, onEvent) {
+async function readSse(stream, onEvent, signal) {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buf = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    buf = flushSseLines(buf, onEvent, false);
+  const emit = (event) => {
+    if (signal?.aborted) return;
+    onEvent(event);
+  };
+  try {
+    while (true) {
+      if (signal?.aborted) break;
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (signal?.aborted) break;
+      buf += decoder.decode(value, { stream: true });
+      buf = flushSseLines(buf, emit, false);
+    }
+    if (!signal?.aborted) {
+      buf += decoder.decode();
+      flushSseLines(buf, emit, true);
+    }
+  } finally {
+    if (signal?.aborted) {
+      try {
+        await reader.cancel();
+      } catch {
+        /* already closed */
+      }
+    }
+    reader.releaseLock();
   }
-  buf += decoder.decode();
-  flushSseLines(buf, onEvent, true);
 }

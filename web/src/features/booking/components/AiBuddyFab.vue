@@ -183,6 +183,16 @@ let wanderX = 0;
 let wanderY = 0;
 let reduced = false;
 let idleTimer = 0;
+/** @type {AbortController | null} */
+let turnAbort = null;
+let turnGen = 0;
+
+function abortInFlightTurn() {
+  if (turnAbort) {
+    turnAbort.abort();
+    turnAbort = null;
+  }
+}
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
@@ -288,6 +298,8 @@ function toggle() {
     if (ui.value.sessionId || ui.value.card) {
       dismiss();
     } else {
+      abortInFlightTurn();
+      turnGen += 1;
       dockOpen.value = false;
     }
     return;
@@ -297,8 +309,10 @@ function toggle() {
 
 /**
  * @param {object} event
+ * @param {number} gen
  */
-function onEvent(event) {
+function onEvent(event, gen) {
+  if (gen !== turnGen) return;
   ui.value = applyAgentEvent(ui.value, event);
   if (event.type === "booked") {
     showToastSuccess("预定成功");
@@ -319,10 +333,15 @@ function onEvent(event) {
  * @param {Record<string, unknown>} body
  */
 async function runTurn(body) {
+  abortInFlightTurn();
+  const gen = ++turnGen;
+  const ac = new AbortController();
+  turnAbort = ac;
   sending.value = true;
   try {
-    await streamTurn(body, onEvent);
+    await streamTurn(body, (e) => onEvent(e, gen), { signal: ac.signal });
   } catch (err) {
+    if (ac.signal.aborted) return;
     ui.value = applyAgentEvent(ui.value, {
       type: "error",
       msg: err.msg || err.message || "请求失败",
@@ -331,6 +350,7 @@ async function runTurn(body) {
     });
     dockOpen.value = true;
   } finally {
+    if (turnAbort === ac) turnAbort = null;
     sending.value = false;
   }
 }
@@ -375,16 +395,25 @@ function confirmDraft(title) {
 }
 
 async function dismiss() {
+  abortInFlightTurn();
   const sessionId = ui.value.sessionId;
+  const gen = ++turnGen;
+  const ac = new AbortController();
+  turnAbort = ac;
   try {
     if (sessionId) {
       await streamTurn(
         { sessionId, action: "cancel" },
-        onEvent
+        (e) => onEvent(e, gen),
+        { signal: ac.signal }
       );
     }
   } catch {
-    /* 网络失败仍收起 */
+    if (!ac.signal.aborted) {
+      /* 网络失败仍收起 */
+    }
+  } finally {
+    if (turnAbort === ac) turnAbort = null;
   }
   ui.value = applyAgentEvent(ui.value, {
     type: "closed",
@@ -402,6 +431,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  abortInFlightTurn();
+  turnGen += 1;
   cancelAnimationFrame(raf);
   window.clearTimeout(idleTimer);
   window.removeEventListener("pointermove", onPointerMove);
