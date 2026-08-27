@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import type { AgentSessionStore } from "./agentSession.js";
+import type { LlmPort } from "./agentLlm.js";
 import type { FreeSlot } from "./availability.js";
 import { searchAvailability } from "./availability.js";
 import { createBooking, getBoard, type BookingHost } from "./booking.js";
@@ -55,9 +56,7 @@ export type TurnEvent =
   | { type: "booked"; bookingId: string; expression: MeetingBuddyExpression }
   | { type: "closed"; expression: MeetingBuddyExpression };
 
-export type LlmPort = {
-  complete: (args: { userText: string; toolResult?: unknown }) => Promise<unknown>;
-};
+export type { LlmPort } from "./agentLlm.js";
 
 export type TurnInput = {
   db: Database.Database;
@@ -82,7 +81,7 @@ const slotKey = (slot: Pick<FreeSlot, "roomId" | "date" | "start" | "end">): str
 const durationMin = (slot: Pick<FreeSlot, "start" | "end">): number =>
   toMinutes(slot.end) - toMinutes(slot.start);
 
-export const handleTurn = (input: TurnInput): TurnEvent[] => {
+export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
   const { db, corpId, user, body, store, now = shanghaiNow(), llm } = input;
   const action = body.action ?? "message";
 
@@ -184,6 +183,61 @@ export const handleTurn = (input: TurnInput): TurnEvent[] => {
       break;
     }
     case "message": {
+      const message = body.message?.trim() ?? "";
+      if (!message) {
+        events.push({ type: "need_more", text: "请说明想订哪天的会议室", expression: "puzzled" });
+        break;
+      }
+
+      try {
+        const decision = await llm!.complete({ userText: message });
+
+        if (decision.kind === "need_more") {
+          events.push({ type: "need_more", text: decision.text, expression: "puzzled" });
+          break;
+        }
+
+        if (decision.kind === "search") {
+          const date = decision.args.date || now.date;
+          const board = getBoard(db, corpId, date, user.userId);
+          if (!board.ok) {
+            events.push({
+              type: "error",
+              msg: board.msg,
+              code: board.code,
+              expression: "sorry"
+            });
+            break;
+          }
+
+          const search = searchAvailability(
+            board.value.rooms,
+            { ...decision.args, date },
+            now
+          );
+
+          if (search.rooms.length === 0) {
+            events.push({
+              type: "need_more",
+              text: "没有符合条件的空档",
+              expression: "puzzled"
+            });
+            break;
+          }
+
+          const allSlots = search.rooms.flatMap((room) => room.slots);
+          store.rememberSlots(user.userId, sessionId, allSlots);
+          events.push({
+            type: "query",
+            heading: search.heading,
+            rooms: search.rooms,
+            expression: "ease"
+          });
+          break;
+        }
+      } catch {
+        events.push({ type: "error", msg: "助手暂时不可用", expression: "sorry" });
+      }
       break;
     }
     default: {

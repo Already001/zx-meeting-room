@@ -64,11 +64,11 @@ const turn = (
     now: FROZEN
   });
 
-test("confirm without draft creates zero bookings", () => {
+test("confirm without draft creates zero bookings", async () => {
   const { db } = setup();
   const store = createAgentSessionStore();
   const { sessionId } = store.ensure(host.userId);
-  const events = turn(db, store, { sessionId, action: "confirm", draftId: "missing-draft" });
+  const events = await turn(db, store, { sessionId, action: "confirm", draftId: "missing-draft" });
   assert.equal(bookingCount(db), 0);
   const err = events.find((e) => e.type === "error");
   assert.ok(err);
@@ -77,12 +77,12 @@ test("confirm without draft creates zero bookings", () => {
   }
 });
 
-test("pick_slot without issued slot creates zero bookings", () => {
+test("pick_slot without issued slot creates zero bookings", async () => {
   const { db, roomId } = setup();
   const store = createAgentSessionStore();
   const { sessionId } = store.ensure(host.userId);
   const slot = makeSlot(roomId, "11:00", "12:00");
-  const events = turn(db, store, { sessionId, action: "pick_slot", slot });
+  const events = await turn(db, store, { sessionId, action: "pick_slot", slot });
   assert.equal(bookingCount(db), 0);
   const err = events.find((e) => e.type === "error");
   assert.ok(err);
@@ -91,10 +91,10 @@ test("pick_slot without issued slot creates zero bookings", () => {
   }
 });
 
-test("message without llm creates zero bookings", () => {
+test("message without llm creates zero bookings", async () => {
   const { db } = setup();
   const store = createAgentSessionStore();
-  const events = turn(db, store, { action: "message", message: "明天下午订一小时" });
+  const events = await turn(db, store, { action: "message", message: "明天下午订一小时" });
   assert.equal(bookingCount(db), 0);
   assert.equal(events.length, 1);
   assert.deepEqual(events[0], {
@@ -105,19 +105,19 @@ test("message without llm creates zero bookings", () => {
   });
 });
 
-test("pick_slot then confirm writes one booking and title can be overridden", () => {
+test("pick_slot then confirm writes one booking and title can be overridden", async () => {
   const { db, roomId } = setup();
   const store = createAgentSessionStore();
   const { sessionId } = store.ensure(host.userId);
   const slot = makeSlot(roomId, "11:00", "12:00");
   store.rememberSlots(host.userId, sessionId, [slot]);
 
-  const picked = turn(db, store, { sessionId, action: "pick_slot", slot });
+  const picked = await turn(db, store, { sessionId, action: "pick_slot", slot });
   const confirmEvt = picked.find((e) => e.type === "confirm");
   assert.ok(confirmEvt?.type === "confirm");
   const draftId = confirmEvt.draft.draftId;
 
-  const confirmed = turn(db, store, {
+  const confirmed = await turn(db, store, {
     sessionId,
     action: "confirm",
     draftId,
@@ -133,7 +133,7 @@ test("pick_slot then confirm writes one booking and title can be overridden", ()
   assert.equal(row.title, "评审会");
 });
 
-test("confirm on occupied slot returns M4010 with suggest alternatives", () => {
+test("confirm on occupied slot returns M4010 with suggest alternatives", async () => {
   const { db, roomId } = setup();
   const occupied = createBooking(
     db,
@@ -152,11 +152,11 @@ test("confirm on occupied slot returns M4010 with suggest alternatives", () => {
   const alt3 = makeSlot(roomId, "13:00", "14:00");
   store.rememberSlots(host.userId, sessionId, [target, alt1, alt2, alt3]);
 
-  const picked = turn(db, store, { sessionId, action: "pick_slot", slot: target });
+  const picked = await turn(db, store, { sessionId, action: "pick_slot", slot: target });
   const draftId = picked.find((e) => e.type === "confirm")?.draft.draftId;
   assert.ok(draftId);
 
-  const events = turn(db, store, { sessionId, action: "confirm", draftId });
+  const events = await turn(db, store, { sessionId, action: "confirm", draftId });
   assert.equal(bookingCount(db), 1);
 
   const err = events.find((e) => e.type === "error");

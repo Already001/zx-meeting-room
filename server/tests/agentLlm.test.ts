@@ -1,0 +1,219 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { openMemoryDb, ensureDefaultDicts } from "../src/db.ts";
+import { createRoom } from "../src/domain/room.ts";
+import { createAgentSessionStore } from "../src/domain/agentSession.ts";
+import { handleTurn } from "../src/domain/agentTurn.ts";
+import { createOpenAiLlm } from "../src/domain/agentLlm.ts";
+
+const FROZEN = { date: "2026-08-27", minute: 10 * 60 };
+const CORP = "c1";
+const host = { userId: "u1", userName: "张三", dept: "研发" };
+
+const roomBase = {
+  name: "1号",
+  buildingName: "奥城",
+  floorName: "7层",
+  capacity: 8,
+  facilities: ["电视"],
+  openStart: "09:00",
+  openEnd: "18:00",
+  bookAheadDays: 7 as const,
+  needApproval: false,
+  allowRecurring: false,
+  allowPreempt: false,
+  enabled: true
+};
+
+const bookingCount = (db: ReturnType<typeof openMemoryDb>) =>
+  (db.prepare("SELECT count(*) AS n FROM bookings").get() as { n: number }).n;
+
+const setup = () => {
+  const db = openMemoryDb();
+  ensureDefaultDicts(db, CORP);
+  const room = createRoom(db, CORP, roomBase);
+  assert.equal(room.ok, true);
+  if (!room.ok) throw new Error("setup room failed");
+  return { db, roomId: room.value.id };
+};
+
+const searchToolResponse = (args: Record<string, unknown>) =>
+  new Response(
+    JSON.stringify({
+      choices: [
+        {
+          message: {
+            tool_calls: [
+              {
+                function: {
+                  name: "search_availability",
+                  arguments: JSON.stringify(args)
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } }
+  );
+
+const contentOnlyResponse = (content: string) =>
+  new Response(
+    JSON.stringify({
+      choices: [{ message: { content } }]
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } }
+  );
+
+test("createOpenAiLlm parses search_availability tool call", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return searchToolResponse({ date: "2026-08-27", durationMin: 60 });
+    }
+  });
+
+  const decision = await llm.complete({ userText: "今天下午一小时" });
+  assert.deepEqual(decision, {
+    kind: "search",
+    args: { date: "2026-08-27", durationMin: 60 }
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.url, "https://llm.example/v1/chat/completions");
+  const body = JSON.parse(String(calls[0]?.init?.body));
+  assert.equal(body.model, "gpt-test");
+  assert.equal(body.messages[1].content, "今天下午一小时");
+});
+
+test("createOpenAiLlm returns need_more when no tool call", async () => {
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async () => contentOnlyResponse("还要几点")
+  });
+
+  const decision = await llm.complete({ userText: "订会议室" });
+  assert.deepEqual(decision, { kind: "need_more", text: "还要几点" });
+});
+
+test("handleTurn message with search tool returns query and zero bookings", async () => {
+  const { db } = setup();
+  const store = createAgentSessionStore();
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async () => searchToolResponse({ date: "2026-08-27", durationMin: 60 })
+  });
+
+  const events = await handleTurn({
+    db,
+    corpId: CORP,
+    user: host,
+    body: { action: "message", message: "今天下午订一小时" },
+    store,
+    now: FROZEN,
+    llm
+  });
+
+  assert.equal(bookingCount(db), 0);
+  const query = events.find((e) => e.type === "query");
+  assert.ok(query?.type === "query");
+  assert.equal(query.expression, "ease");
+  assert.ok(query.rooms.length > 0);
+  assert.ok(query.rooms.some((r) => r.slots.length > 0));
+});
+
+test("handleTurn message with need_more content returns puzzled need_more", async () => {
+  const { db } = setup();
+  const store = createAgentSessionStore();
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async () => contentOnlyResponse("还要几点")
+  });
+
+  const events = await handleTurn({
+    db,
+    corpId: CORP,
+    user: host,
+    body: { action: "message", message: "订会议室" },
+    store,
+    now: FROZEN,
+    llm
+  });
+
+  assert.equal(bookingCount(db), 0);
+  const needMore = events.find((e) => e.type === "need_more");
+  assert.deepEqual(needMore, { type: "need_more", text: "还要几点", expression: "puzzled" });
+});
+
+test("handleTurn message with booking intent and single slot still returns query", async () => {
+  const { db } = setup();
+  const store = createAgentSessionStore();
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async () =>
+      searchToolResponse({
+        date: "2026-08-27",
+        durationMin: 60,
+        windowStart: "14:00",
+        windowEnd: "15:00",
+        buildingName: "奥城",
+        floorName: "7层",
+        capacity: 8
+      })
+  });
+
+  const events = await handleTurn({
+    db,
+    corpId: CORP,
+    user: host,
+    body: { action: "message", message: "帮我订明天下午2点奥城7层1号" },
+    store,
+    now: FROZEN,
+    llm
+  });
+
+  assert.equal(bookingCount(db), 0);
+  assert.ok(events.some((e) => e.type === "query"));
+  assert.equal(events.some((e) => e.type === "confirm"), false);
+  assert.equal(events.some((e) => e.type === "booked"), false);
+});
+
+test("handleTurn message llm fetch failure returns sorry error", async () => {
+  const { db } = setup();
+  const store = createAgentSessionStore();
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async () => new Response("bad gateway", { status: 502 })
+  });
+
+  const events = await handleTurn({
+    db,
+    corpId: CORP,
+    user: host,
+    body: { action: "message", message: "查空档" },
+    store,
+    now: FROZEN,
+    llm
+  });
+
+  assert.equal(bookingCount(db), 0);
+  assert.deepEqual(events.find((e) => e.type === "error"), {
+    type: "error",
+    msg: "助手暂时不可用",
+    expression: "sorry"
+  });
+});
