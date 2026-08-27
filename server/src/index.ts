@@ -2,14 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import { corsMiddleware } from "./middleware/cors.js";
-import { requireCorpId } from "./middleware/corp.js";
-import health from "./routes/health.js";
-import me from "./routes/me.js";
-import dicts from "./routes/dicts.js";
-import rooms from "./routes/rooms.js";
-import bookings from "./routes/bookings.js";
+import { createApp } from "./app.js";
 
 const loadEnvFile = () => {
   const p = path.join(path.dirname(fileURLToPath(import.meta.url)), "../.env");
@@ -28,24 +21,7 @@ const loadEnvFile = () => {
 loadEnvFile();
 
 const PORT = Number(process.env.PORT || 3100);
-const app = new Hono();
-app.use("*", corsMiddleware);
-app.route("/meetingApi", health);
-
-type Vars = { corpId: string; userId: string; userName: string; dept: string };
-const api = new Hono<{ Variables: Vars }>();
-api.use("*", requireCorpId);
-api.route("/", me);
-api.route("/", dicts);
-api.route("/", rooms);
-api.route("/", bookings);
-app.route("/meetingApi", api);
-
-app.notFound((c) => c.json({ code: "M4004", data: null, msg: "接口不存在" }));
-app.onError((e, c) => {
-  console.error(e);
-  return c.json({ code: "M5000", data: null, msg: "服务异常" });
-});
+const app = createApp();
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`[meeting-server] listening on http://localhost:${info.port}`);

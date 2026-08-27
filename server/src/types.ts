@@ -1,4 +1,14 @@
+import type Database from "better-sqlite3";
+
 export type DictType = "building" | "facility";
+
+export type AppVars = {
+  corpId: string;
+  userId: string;
+  userName: string;
+  dept: string;
+  db: Database.Database;
+};
 
 export type DictRecord = {
   id: string;
