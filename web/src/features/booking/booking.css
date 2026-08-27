@@ -1379,8 +1379,8 @@
   flex: 1;
   overflow: auto;
   position: relative;
-  background: var(--color-canvas);
-  margin: 12px 16px 16px;
+  background: var(--color-canvas-soft);
+  margin: 12px 16px;
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
   user-select: none;
@@ -1394,7 +1394,7 @@
   align-items: stretch;
   position: relative;
   z-index: 0;
-  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-canvas);
 }
 
 .tl-row.is-picking {
@@ -1409,11 +1409,12 @@
   z-index: 4;
   background: var(--color-canvas);
   border-right: 1px solid var(--color-hairline);
-  padding: 8px 12px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 4px;
+  min-width: 0;
 }
 
 .tl-row.is-picking .tl-room-cell {
@@ -1459,17 +1460,23 @@
   flex: 1;
   min-width: 948px;
   position: relative;
-  height: 48px;
   background-image: linear-gradient(to right, var(--color-hairline) 1px, transparent 1px);
-  background-size: calc(100% / 24) 100%;
+  background-size: calc(100% / 16) 100%;
   cursor: crosshair;
   touch-action: none;
+}
+
+.tl-body .tl-row > .tl-track {
+  align-self: stretch;
+  min-height: 0;
 }
 
 .tl-head-row {
   position: sticky;
   top: 0;
   z-index: 6;
+  align-items: center;
+  min-height: 32px;
   background: var(--color-canvas-soft);
   border-bottom: 1px solid var(--color-hairline);
 }
@@ -1486,7 +1493,9 @@
 }
 
 .tl-axis {
-  height: 26px;
+  height: auto;
+  min-height: 32px;
+  align-self: stretch;
   background-image: none;
   cursor: default;
 }
@@ -1495,17 +1504,21 @@
 .tl-axis-now,
 .tl-axis-pick {
   position: absolute;
-  top: 6px;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   font-size: 12px;
   line-height: 16px;
   color: var(--color-mute);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .tl-axis-label-first {
-  transform: none;
-  left: 2px !important;
+  transform: translate(0, -50%);
+}
+
+.tl-axis-label-last {
+  transform: translate(-100%, -50%);
 }
 
 .tl-axis-now,
@@ -1528,7 +1541,11 @@
 
 .tl-body {
   position: relative;
-  padding-bottom: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0 12px;
+  background: var(--color-canvas-soft);
 }
 
 .tl-guides {
@@ -1554,7 +1571,7 @@
 .tl-line-pick {
   position: absolute;
   top: 0;
-  bottom: 200px;
+  bottom: 0;
   width: 1px;
 }
 
@@ -1601,8 +1618,8 @@
 
 .tl-event {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
+  top: 2px;
+  bottom: 2px;
   background: var(--timeline-busy);
   border-left: 3px solid var(--color-warning);
   border-radius: var(--radius-xs);
@@ -1613,6 +1630,7 @@
   padding: 0 8px;
   cursor: default;
   z-index: 2;
+  min-width: 0;
 }
 
 .tl-event.mine {
@@ -1636,8 +1654,8 @@
 
 .tl-picking {
   position: absolute;
-  top: 6px;
-  bottom: 6px;
+  top: 1px;
+  bottom: 1px;
   background: var(--color-primary-bg);
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-xs);
@@ -1647,8 +1665,9 @@
 
 .tl-picking-label {
   position: absolute;
-  top: 4px;
+  top: 50%;
   left: 6px;
+  transform: translateY(-50%);
   font-size: 12px;
   color: var(--color-primary);
   white-space: nowrap;

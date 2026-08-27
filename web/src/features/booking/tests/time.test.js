@@ -112,6 +112,15 @@ test("TL.eventAt uses half-open interval and listWidth clamps to list range", ()
   assert.equal(TL.listWidth(22 * 60, 22 * 60), "0%");
 });
 
+test("list window starts at 07:00 and ends at 23:00", () => {
+  assert.equal(TL.LIST_START, 7 * 60);
+  assert.equal(TL.LIST_END, 23 * 60);
+  assert.equal(TL.LIST_HOURS[0], 7);
+  assert.equal(TL.LIST_HOURS.at(-1), 23);
+  assert.equal(TL.listPct(7 * 60), "0%");
+  assert.equal(TL.listPct(23 * 60), "100%");
+});
+
 test("TL.minuteAt and minuteAtList snap to 30 minutes", () => {
   const rect = { left: 0, width: 1440 };
   assert.equal(TL.minuteAt(rect, 90), 90);

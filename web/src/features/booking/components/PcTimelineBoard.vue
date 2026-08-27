@@ -13,15 +13,18 @@
             v-for="h in visibleHours"
             :key="h"
             class="tl-axis-label"
-            :class="{ 'tl-axis-label-first': h === 0 }"
-            :style="{ left: TL.pct(h * 60) }"
+            :class="{
+              'tl-axis-label-first': h === TL.LIST_HOURS[0],
+              'tl-axis-label-last': h === TL.LIST_HOURS.at(-1)
+            }"
+            :style="{ left: TL.listPct(h * 60) }"
           >
             {{ String(h).padStart(2, "0") }}:00
           </span>
           <span
-            v-if="isToday && rooms.length > 0"
+            v-if="showNow && rooms.length > 0"
             class="tl-axis-now"
-            :style="{ left: TL.pct(nowMin) }"
+            :style="{ left: TL.listPct(nowMin) }"
           >
             {{ fromMinutes(nowMin) }}
           </span>
@@ -29,7 +32,7 @@
             v-if="selection"
             class="tl-axis-pick"
             :style="{
-              left: TL.pct((selection.start + selection.end) / 2)
+              left: TL.listPct((selection.start + selection.end) / 2)
             }"
           >
             {{ fromMinutes(selection.start) }}-{{ fromMinutes(selection.end) }}
@@ -45,18 +48,18 @@
           <div class="tl-room-cell tl-guides-spacer" />
           <div class="tl-track">
             <span
-              v-if="isToday"
+              v-if="showNow"
               class="tl-line-now"
-              :style="{ left: TL.pct(nowMin) }"
+              :style="{ left: TL.listPct(nowMin) }"
             />
             <template v-if="selection">
               <span
                 class="tl-line-pick"
-                :style="{ left: TL.pct(selection.start) }"
+                :style="{ left: TL.listPct(selection.start) }"
               />
               <span
                 class="tl-line-pick"
-                :style="{ left: TL.pct(selection.end) }"
+                :style="{ left: TL.listPct(selection.end) }"
               />
             </template>
           </div>
@@ -89,18 +92,21 @@
 
           <div class="tl-track" @pointerdown="handlePointerDown(room, $event)">
             <span
-              v-if="isToday && nowMin > 0"
+              v-if="isToday && pastEnd > TL.LIST_START"
               class="tl-past"
-              :style="{ width: TL.pct(nowMin) }"
+              :style="{
+                left: TL.listPct(TL.LIST_START),
+                width: TL.listWidth(TL.LIST_START, pastEnd)
+              }"
             />
             <div
-              v-for="ev in room.busyEvents || []"
+              v-for="ev in visibleEvents(room)"
               :key="`${room.id}-${ev.start}-${ev.end}-${ev.title}`"
               class="tl-event"
               :class="{ mine: ev.mine }"
               :style="{
-                left: TL.pct(toMinutes(ev.start)),
-                width: TL.pct(toMinutes(ev.end) - toMinutes(ev.start))
+                left: TL.listPct(toMinutes(ev.start)),
+                width: TL.listWidth(toMinutes(ev.start), toMinutes(ev.end))
               }"
               @mouseenter="showTip(ev, $event.currentTarget)"
               @mouseleave="tip = null"
@@ -117,8 +123,8 @@
               v-if="selection && selection.roomId === room.id"
               class="tl-picking"
               :style="{
-                left: TL.pct(selection.start),
-                width: TL.pct(selection.end - selection.start)
+                left: TL.listPct(selection.start),
+                width: TL.listWidth(selection.start, selection.end)
               }"
             >
               <span class="tl-picking-label">
@@ -273,9 +279,27 @@ const axisHourHidden = (hourMin) => {
   return near(hourMin, mid, 48);
 };
 
-const visibleHours = computed(() =>
-  TL.HOURS.filter((h) => !axisHourHidden(h * 60))
+const pastEnd = computed(() =>
+  props.isToday ? Math.min(nowMin.value, TL.LIST_END) : TL.LIST_START
 );
+
+const showNow = computed(
+  () =>
+    props.isToday &&
+    nowMin.value >= TL.LIST_START &&
+    nowMin.value <= TL.LIST_END
+);
+
+const visibleHours = computed(() =>
+  TL.LIST_HOURS.filter((h) => !axisHourHidden(h * 60))
+);
+
+const visibleEvents = (room) =>
+  (room.busyEvents || []).filter((ev) => {
+    const start = toMinutes(ev.start);
+    const end = toMinutes(ev.end);
+    return end > TL.LIST_START && start < TL.LIST_END;
+  });
 
 const confirmRoom = computed(() => {
   const sel = props.selection;
@@ -294,7 +318,7 @@ const handlePointerDown = (room, e) => {
 
   const track = e.currentTarget;
   const rect = track.getBoundingClientRect();
-  const anchor = TL.minuteAt(rect, e.clientX);
+  const anchor = TL.minuteAtList(rect, e.clientX);
   if (props.isToday && anchor < nowMin.value) {
     emit("notice", "该时段已过期");
     return;
@@ -306,7 +330,9 @@ const handlePointerDown = (room, e) => {
 
   const [low, high] = slotWindow(room, anchor, {
     isToday: props.isToday,
-    nowMin: nowMin.value
+    nowMin: nowMin.value,
+    listStart: TL.LIST_START,
+    listEnd: TL.LIST_END
   });
   if (high - low < TL.SNAP) {
     emit("notice", "剩余空闲不足 30 分钟");
@@ -335,7 +361,7 @@ const handlePointerDown = (room, e) => {
 const handlePointerMove = (e) => {
   const drag = dragRef.value;
   if (!drag) return;
-  const minute = TL.minuteAt(drag.rect, e.clientX);
+  const minute = TL.minuteAtList(drag.rect, e.clientX);
   let start = Math.min(drag.anchor, minute);
   let end = Math.max(drag.anchor, minute);
   if (end === start) end = start + TL.SNAP;
