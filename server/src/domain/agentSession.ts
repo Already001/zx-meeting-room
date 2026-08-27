@@ -109,11 +109,14 @@ export function createAgentSessionStore(opts?: { ttlMs?: number; now?: () => num
       return session.issued.has(slotKey(slot));
     },
 
-    putDraft(userId: string, sessionId: string, slot: FreeSlot, title: string): { draftId: string } {
+    putDraft(
+      userId: string,
+      sessionId: string,
+      slot: FreeSlot,
+      title: string
+    ): { draftId: string } | null {
       const session = getSession(userId, sessionId);
-      if (!session) {
-        throw new Error("session not found");
-      }
+      if (!session) return null;
 
       const draftId = randomUUID();
       session.drafts.set(draftId, {

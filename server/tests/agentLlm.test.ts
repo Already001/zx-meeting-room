@@ -102,6 +102,47 @@ test("createOpenAiLlm returns need_more when no tool call", async () => {
   assert.deepEqual(decision, { kind: "need_more", text: "还要几点" });
 });
 
+test("createOpenAiLlm fetch uses a 20s abort signal", async () => {
+  let signal: AbortSignal | undefined;
+  const llm = createOpenAiLlm({
+    baseUrl: "https://llm.example",
+    apiKey: "sk-test",
+    model: "gpt-test",
+    fetchImpl: async (_url, init) => {
+      signal = init?.signal;
+      return contentOnlyResponse("还要几点");
+    }
+  });
+  await llm.complete({ userText: "订会议室" });
+  assert.ok(signal);
+  assert.equal(signal.aborted, false);
+});
+
+test("handleTurn truncates message to 2000 chars before llm", async () => {
+  const { db } = setup();
+  const store = createAgentSessionStore();
+  const seen: string[] = [];
+  const llm = {
+    complete: async ({ userText }: { userText: string }) => {
+      seen.push(userText);
+      return { kind: "need_more" as const, text: "请补充" };
+    }
+  };
+
+  await handleTurn({
+    db,
+    corpId: CORP,
+    user: host,
+    body: { action: "message", message: "订".repeat(2001) },
+    store,
+    now: FROZEN,
+    llm
+  });
+
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0]?.length, 2000);
+});
+
 test("handleTurn message with search tool returns query and zero bookings", async () => {
   const { db } = setup();
   const store = createAgentSessionStore();

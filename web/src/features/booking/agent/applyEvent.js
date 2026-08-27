@@ -107,6 +107,7 @@ export function applyAgentEvent(state, event) {
       return {
         ...state,
         open: false,
+        status: "",
         card: null,
         expression: "happy"
       };
@@ -115,6 +116,7 @@ export function applyAgentEvent(state, event) {
       return {
         ...state,
         open: false,
+        status: "",
         card: null,
         expression: "down"
       };

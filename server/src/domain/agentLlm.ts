@@ -62,6 +62,7 @@ export const createOpenAiLlm = (opts: OpenAiLlmOpts): LlmPort => {
           Authorization: `Bearer ${opts.apiKey}`,
           "Content-Type": "application/json"
         },
+        signal: AbortSignal.timeout(20_000),
         body: JSON.stringify({
           model: opts.model,
           messages: [

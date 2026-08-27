@@ -125,6 +125,7 @@ test("booked collapses panel with happy expression", () => {
   });
   assert.equal(next.open, false);
   assert.equal(next.card, null);
+  assert.equal(next.status, "");
   assert.equal(next.expression, "happy");
   assert.equal(next.sessionId, "sess-1");
 });
@@ -133,10 +134,12 @@ test("closed collapses panel with down expression", () => {
   const prev = {
     ...emptyAgentUi(),
     open: true,
+    status: "正在理解",
     card: { type: "query", heading: "h", rooms: [] }
   };
   const next = applyAgentEvent(prev, { type: "closed", expression: "down" });
   assert.equal(next.open, false);
   assert.equal(next.card, null);
+  assert.equal(next.status, "");
   assert.equal(next.expression, "down");
 });

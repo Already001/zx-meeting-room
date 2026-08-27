@@ -44,6 +44,36 @@ test("invalid JSON body returns M4000", async () => {
   assert.equal(body.msg, "请求无效");
 });
 
+test("unknown action returns JSON M4000 请求无效", async () => {
+  const res = await createApp(openMemoryDb()).request("/meetingApi/agent/turn", {
+    method: "POST",
+    headers: { ...headers("u1"), "content-type": "application/json" },
+    body: JSON.stringify({ action: "nuke", message: "hi" })
+  });
+  const body = await res.json();
+  assert.equal(body.code, "M4000");
+  assert.equal(body.msg, "请求无效");
+});
+
+test("rapid message turns return M4000 请求过于频繁", async () => {
+  process.env.MEETING_LLM_API_KEY = "fake-key";
+  process.env.MEETING_LLM_BASE_URL = "http://127.0.0.1:1";
+  const app = createApp(openMemoryDb());
+  const post = () =>
+    app.request("/meetingApi/agent/turn", {
+      method: "POST",
+      headers: { ...headers("throttle-u1"), "content-type": "application/json" },
+      body: JSON.stringify({ action: "message", message: "订一间" })
+    });
+
+  const first = post();
+  const second = await post();
+  const body = await second.json();
+  assert.equal(body.code, "M4000");
+  assert.equal(body.msg, "请求过于频繁");
+  await first;
+});
+
 test("cancel returns SSE with closed event", async () => {
   process.env.MEETING_LLM_API_KEY = "fake-key";
   process.env.MEETING_LLM_BASE_URL = "http://fake-llm";

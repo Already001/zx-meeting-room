@@ -32,6 +32,12 @@ test("other user cannot read draft", () => {
   assert.equal(store.getDraft("u2", d.draftId), null);
 });
 
+test("putDraft returns null when session is missing", () => {
+  const store = createAgentSessionStore();
+  store.ensure("u1");
+  assert.equal(store.putDraft("u1", "other-session", slot, ""), null);
+});
+
 test("hasIssued is exact on room+date+start+end", () => {
   const store = createAgentSessionStore();
   const { sessionId } = store.ensure("u1");

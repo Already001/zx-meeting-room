@@ -304,6 +304,8 @@ function toggle() {
     }
     return;
   }
+  const sessionId = ui.value.sessionId;
+  ui.value = { ...emptyAgentUi(), sessionId };
   dockOpen.value = true;
 }
 
@@ -394,33 +396,31 @@ function confirmDraft(title) {
   });
 }
 
-async function dismiss() {
+function dismiss() {
   abortInFlightTurn();
   const sessionId = ui.value.sessionId;
-  const gen = ++turnGen;
-  const ac = new AbortController();
-  turnAbort = ac;
-  try {
-    if (sessionId) {
-      await streamTurn(
-        { sessionId, action: "cancel" },
-        (e) => onEvent(e, gen),
-        { signal: ac.signal }
-      );
-    }
-  } catch {
-    if (!ac.signal.aborted) {
-      /* 网络失败仍收起 */
-    }
-  } finally {
-    if (turnAbort === ac) turnAbort = null;
-  }
   ui.value = applyAgentEvent(ui.value, {
     type: "closed",
     expression: "down"
   });
   dockOpen.value = false;
   scheduleIdle();
+  if (!sessionId) return;
+
+  const gen = ++turnGen;
+  const ac = new AbortController();
+  turnAbort = ac;
+  streamTurn(
+    { sessionId, action: "cancel" },
+    (e) => onEvent(e, gen),
+    { signal: ac.signal }
+  )
+    .catch(() => {
+      /* 本地已收起 */
+    })
+    .finally(() => {
+      if (turnAbort === ac) turnAbort = null;
+    });
 }
 
 onMounted(() => {

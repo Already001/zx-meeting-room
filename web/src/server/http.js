@@ -55,15 +55,17 @@ export const insRequestArgs = [
       }
       // 调用方可按业务归属显式指定企业，未指定时用当前企业
       if (!request.headers.zxCorpId) {
-        request.headers.zxCorpId = getCorpId();
+        request.headers.zxCorpId = encodeURIComponent(getCorpId() || "");
       }
       const userId = getUserId();
-      if (userId && !request.headers.zxUserId) request.headers.zxUserId = userId;
+      if (userId && !request.headers.zxUserId)
+        request.headers.zxUserId = encodeURIComponent(userId);
       const userName = getUserName();
       if (userName && !request.headers.zxUserName)
-        request.headers.zxUserName = userName;
+        request.headers.zxUserName = encodeURIComponent(userName);
       const dept = getDept();
-      if (dept && !request.headers.zxUserDept) request.headers.zxUserDept = dept;
+      if (dept && !request.headers.zxUserDept)
+        request.headers.zxUserDept = encodeURIComponent(dept);
     }
     return request;
   },

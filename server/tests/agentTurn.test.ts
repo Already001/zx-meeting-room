@@ -4,7 +4,7 @@ import { openMemoryDb, ensureDefaultDicts } from "../src/db.ts";
 import { createRoom } from "../src/domain/room.ts";
 import { createBooking } from "../src/domain/booking.ts";
 import { createAgentSessionStore } from "../src/domain/agentSession.ts";
-import { handleTurn } from "../src/domain/agentTurn.ts";
+import { handleTurn, parseTurnAction } from "../src/domain/agentTurn.ts";
 import type { FreeSlot } from "../src/domain/availability.ts";
 
 const FROZEN = { date: "2026-08-26", minute: 10 * 60 };
@@ -63,6 +63,33 @@ const turn = (
     store,
     now: FROZEN
   });
+
+test("parseTurnAction defaults missing action to message and rejects unknown", () => {
+  assert.equal(parseTurnAction(undefined), "message");
+  assert.equal(parseTurnAction(null), "message");
+  assert.equal(parseTurnAction("pick_slot"), "pick_slot");
+  assert.equal(parseTurnAction("nuke"), null);
+});
+
+test("pick_slot treats putDraft null as 请选择助手给出的时段", async () => {
+  const { db, roomId } = setup();
+  const inner = createAgentSessionStore();
+  const { sessionId } = inner.ensure(host.userId);
+  const slot = makeSlot(roomId, "11:00", "12:00");
+  inner.rememberSlots(host.userId, sessionId, [slot]);
+  const store = {
+    ...inner,
+    putDraft: () => null
+  };
+  const events = await turn(db, store as ReturnType<typeof createAgentSessionStore>, {
+    sessionId,
+    action: "pick_slot",
+    slot
+  });
+  assert.equal(bookingCount(db), 0);
+  const err = events.find((e) => e.type === "error");
+  assert.equal(err && err.type === "error" ? err.msg : "", "请选择助手给出的时段");
+});
 
 test("confirm without draft creates zero bookings", async () => {
   const { db } = setup();

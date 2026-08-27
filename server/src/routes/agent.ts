@@ -2,16 +2,18 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { createAgentSessionStore } from "../domain/agentSession.js";
 import { createOpenAiLlm } from "../domain/agentLlm.js";
-import { handleTurn } from "../domain/agentTurn.js";
+import { handleTurn, parseTurnAction, type TurnAction } from "../domain/agentTurn.js";
 import { fail } from "../envelope.js";
 import { requireUser } from "../middleware/user.js";
 import type { AppVars } from "../types.js";
 
 const sessionStore = createAgentSessionStore();
+const lastMessageTurnAt = new Map<string, number>();
+const MESSAGE_TURN_GAP_MS = 800;
 
 type TurnBody = {
   sessionId?: string;
-  action?: "message" | "pick_slot" | "confirm" | "cancel";
+  action?: TurnAction;
   message?: string;
   slot?: {
     roomId: string;
@@ -28,6 +30,12 @@ type TurnBody = {
   title?: string;
 };
 
+const sseErrorPayload = JSON.stringify({
+  type: "error",
+  msg: "助手暂时不可用",
+  expression: "sorry"
+});
+
 const agent = new Hono<{ Variables: AppVars }>();
 
 agent.post("/agent/turn", requireUser, async (c) => {
@@ -38,7 +46,15 @@ agent.post("/agent/turn", requireUser, async (c) => {
     return fail(c, "M4000", "请求无效");
   }
 
-  const action = body.action ?? "message";
+  const action = parseTurnAction((body as { action?: unknown }).action);
+  if (action === null) {
+    return fail(c, "M4000", "请求无效");
+  }
+  body.action = action;
+
+  if (typeof body.message === "string") {
+    body.message = body.message.slice(0, 2000);
+  }
 
   if (action === "message") {
     const apiKey = process.env.MEETING_LLM_API_KEY;
@@ -46,6 +62,14 @@ agent.post("/agent/turn", requireUser, async (c) => {
     if (!apiKey || !baseUrl) {
       return fail(c, "M4000", "助手未配置");
     }
+
+    const userId = c.get("userId");
+    const now = Date.now();
+    const last = lastMessageTurnAt.get(userId) ?? 0;
+    if (now - last < MESSAGE_TURN_GAP_MS) {
+      return fail(c, "M4000", "请求过于频繁");
+    }
+    lastMessageTurnAt.set(userId, now);
   }
 
   const llm =
@@ -57,28 +81,38 @@ agent.post("/agent/turn", requireUser, async (c) => {
         })
       : undefined;
 
-  return streamSSE(c, async (stream) => {
-    await stream.writeSSE({
-      data: JSON.stringify({ type: "status", text: "正在理解", expression: "focus" })
-    });
+  return streamSSE(
+    c,
+    async (stream) => {
+      await stream.writeSSE({
+        data: JSON.stringify({ type: "status", text: "正在理解", expression: "focus" })
+      });
 
-    const events = await handleTurn({
-      db: c.get("db"),
-      corpId: c.get("corpId"),
-      user: {
-        userId: c.get("userId"),
-        userName: c.get("userName"),
-        dept: c.get("dept")
-      },
-      body,
-      store: sessionStore,
-      llm
-    });
+      try {
+        const events = await handleTurn({
+          db: c.get("db"),
+          corpId: c.get("corpId"),
+          user: {
+            userId: c.get("userId"),
+            userName: c.get("userName"),
+            dept: c.get("dept")
+          },
+          body,
+          store: sessionStore,
+          llm
+        });
 
-    for (const event of events) {
-      await stream.writeSSE({ data: JSON.stringify(event) });
+        for (const event of events) {
+          await stream.writeSSE({ data: JSON.stringify(event) });
+        }
+      } catch {
+        await stream.writeSSE({ data: sseErrorPayload });
+      }
+    },
+    async (_err, stream) => {
+      await stream.writeSSE({ data: sseErrorPayload });
     }
-  });
+  );
 });
 
 export default agent;

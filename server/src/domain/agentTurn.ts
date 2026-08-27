@@ -58,13 +58,28 @@ export type TurnEvent =
 
 export type { LlmPort } from "./agentLlm.js";
 
+export const TURN_ACTIONS = ["message", "pick_slot", "confirm", "cancel"] as const;
+export type TurnAction = (typeof TURN_ACTIONS)[number];
+
+const MAX_MESSAGE_CHARS = 2000;
+
+/** 缺省为 message；非法值返回 null，由路由以 M4000 拒绝。 */
+export const parseTurnAction = (raw: unknown): TurnAction | null => {
+  if (raw === undefined || raw === null) return "message";
+  if (typeof raw !== "string") return null;
+  for (const allowed of TURN_ACTIONS) {
+    if (raw === allowed) return allowed;
+  }
+  return null;
+};
+
 export type TurnInput = {
   db: Database.Database;
   corpId: string;
   user: BookingHost;
   body: {
     sessionId?: string;
-    action?: "message" | "pick_slot" | "confirm" | "cancel";
+    action?: TurnAction;
     message?: string;
     slot?: MeetingFreeSlot;
     draftId?: string;
@@ -83,7 +98,10 @@ const durationMin = (slot: Pick<FreeSlot, "start" | "end">): number =>
 
 export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
   const { db, corpId, user, body, store, now = shanghaiNow(), llm } = input;
-  const action = body.action ?? "message";
+  const action = parseTurnAction(body.action);
+  if (action === null) {
+    return [{ type: "error", msg: "请求无效", code: "M4000", expression: "sorry" }];
+  }
 
   if (action === "message" && !llm) {
     return [{ type: "error", msg: "助手未配置", code: "M4000", expression: "sorry" }];
@@ -108,10 +126,14 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
         events.push({ type: "error", msg: "请选择助手给出的时段", expression: "sorry" });
         break;
       }
-      const { draftId } = store.putDraft(user.userId, sessionId, slot, "");
+      const drafted = store.putDraft(user.userId, sessionId, slot, "");
+      if (!drafted) {
+        events.push({ type: "error", msg: "请选择助手给出的时段", expression: "sorry" });
+        break;
+      }
       events.push({
         type: "confirm",
-        draft: { draftId, slot, title: "" },
+        draft: { draftId: drafted.draftId, slot, title: "" },
         expression: "expect"
       });
       break;
@@ -183,7 +205,7 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
       break;
     }
     case "message": {
-      const message = body.message?.trim() ?? "";
+      const message = (body.message ?? "").trim().slice(0, MAX_MESSAGE_CHARS);
       if (!message) {
         events.push({ type: "need_more", text: "请说明想订哪天的会议室", expression: "puzzled" });
         break;

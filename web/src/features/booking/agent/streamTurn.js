@@ -6,16 +6,11 @@ import {
   getUserName
 } from "@/utils";
 import { flushSseLines } from "./sseLines.js";
+import { encodeHeaderValue } from "./headers.js";
 
 const TURN_URL = "/meetingApi/agent/turn";
 
-/** fetch Headers 只接受 ISO-8859-1；把中文按 UTF-8 字节写入。 */
-function headerValue(value) {
-  const bytes = new TextEncoder().encode(String(value || ""));
-  let out = "";
-  for (const b of bytes) out += String.fromCharCode(b);
-  return out;
-}
+export { encodeHeaderValue };
 
 /**
  * @param {Record<string, unknown>} body
@@ -28,10 +23,10 @@ export async function streamTurn(body, onEvent, options = {}) {
   /** @type {Record<string, string>} */
   const headers = {
     "Content-Type": "application/json",
-    zxCorpId: headerValue(getCorpId()),
-    zxUserId: headerValue(getUserId()),
-    zxUserName: headerValue(getUserName()),
-    zxUserDept: headerValue(getDept())
+    zxCorpId: encodeHeaderValue(getCorpId()),
+    zxUserId: encodeHeaderValue(getUserId()),
+    zxUserName: encodeHeaderValue(getUserName()),
+    zxUserDept: encodeHeaderValue(getDept())
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 

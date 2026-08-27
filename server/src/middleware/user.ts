@@ -12,10 +12,20 @@ export const isAdminUser = (userId: string | null | undefined): boolean => {
   return parseAdminIds().includes(userId);
 };
 
+export const decodeHeaderValue = (raw: string | undefined): string => {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return "";
+  try {
+    return decodeURIComponent(trimmed).trim();
+  } catch {
+    return trimmed;
+  }
+};
+
 export const readUser = (c: { req: { header: (n: string) => string | undefined } }) => ({
-  userId: (c.req.header("zxUserId") || "").trim(),
-  userName: (c.req.header("zxUserName") || "").trim(),
-  dept: (c.req.header("zxUserDept") || "").trim()
+  userId: decodeHeaderValue(c.req.header("zxUserId")),
+  userName: decodeHeaderValue(c.req.header("zxUserName")),
+  dept: decodeHeaderValue(c.req.header("zxUserDept"))
 });
 
 export const requireUser = createMiddleware(async (c, next) => {
