@@ -225,6 +225,7 @@
       @confirm="handleConfirmRelease"
       @cancel="confirmPayload = null"
     />
+    <AiBuddyFab :lifted="Boolean(selection)" @booked="reload" />
   </div>
 </template>
 
@@ -249,6 +250,7 @@ import MyBookingsModal from "./components/MyBookingsModal.vue";
 import RoomDetailModal from "./components/RoomDetailModal.vue";
 import OccupancySheet from "./components/OccupancySheet.vue";
 import ConfirmSheet from "./components/ConfirmSheet.vue";
+import AiBuddyFab from "./components/AiBuddyFab.vue";
 import "./booking.css";
 
 const board = useBoard();

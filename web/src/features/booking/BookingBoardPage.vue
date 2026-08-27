@@ -63,6 +63,7 @@
       @close="closeMine"
       @release="onRelease"
     />
+    <AiBuddyFab @booked="reload" />
   </div>
 </template>
 
@@ -83,6 +84,7 @@ import PcTimelineBoard from "./components/PcTimelineBoard.vue";
 import CreateScheduleModal from "./components/CreateScheduleModal.vue";
 import MyBookingsModal from "./components/MyBookingsModal.vue";
 import RoomDetailModal from "./components/RoomDetailModal.vue";
+import AiBuddyFab from "./components/AiBuddyFab.vue";
 import "./booking.css";
 
 const router = useRouter();
