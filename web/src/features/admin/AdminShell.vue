@@ -1,5 +1,6 @@
 <template>
   <div class="flex h-full min-h-full">
+    <a class="sr-only" href="#admin-main">跳到主内容</a>
     <aside
       class="w-60px shrink-0 bg-grayLight border-r border-edge flex flex-col items-center py-12px"
     >
@@ -23,18 +24,17 @@
         </svg>
       </div>
       <nav class="w-full" aria-label="主导航">
-        <button
+        <router-link
           v-for="item in navItems"
           :key="item.id"
-          type="button"
-          class="relative w-full h-44px flex flex-col items-center justify-center gap-2px border-none cursor-pointer text-10px leading-16px whitespace-nowrap"
+          :to="item.path"
+          class="relative w-full h-44px flex flex-col items-center justify-center gap-2px border-none cursor-pointer text-10px leading-16px whitespace-nowrap no-underline"
           :class="
             active === item.id
               ? 'bg-primaryLight text-primary'
               : 'bg-transparent text-grayDark'
           "
           :aria-current="active === item.id ? 'page' : undefined"
-          @click="router.push(item.path)"
         >
           <span
             v-if="active === item.id"
@@ -88,16 +88,16 @@
             <path d="M8 7h8M8 11h6" />
           </svg>
           <span>{{ item.label }}</span>
-        </button>
+        </router-link>
       </nav>
     </aside>
     <div class="flex-1 min-w-0 min-h-0 flex flex-col">
       <header
-        class="h-48px shrink-0 bg-canvas border-b border-edge flex items-center px-20px text-16px font-500 leading-24px text-black whitespace-nowrap overflow-hidden text-ellipsis"
+        class="h-48px shrink-0 bg-canvas border-b border-edge flex items-center px-20px text-16px font-500 leading-24px text-black whitespace-nowrap overflow-hidden text-ellipsis text-pretty"
       >
         智信 · 智能会议室管理平台
       </header>
-      <main class="flex-1 min-h-0 overflow-auto">
+      <main id="admin-main" class="flex-1 min-h-0 overflow-auto" tabindex="-1">
         <div class="p-20px bg-grayLight min-h-full">
           <slot />
         </div>
@@ -107,8 +107,6 @@
 </template>
 
 <script setup>
-import { useRouter } from "vue-router";
-
 defineProps({
   active: {
     type: String,
@@ -117,8 +115,6 @@ defineProps({
       value === "rooms" || value === "dicts" || value === "history"
   }
 });
-
-const router = useRouter();
 
 const navItems = [
   { id: "rooms", label: "会议室", path: "/admin" },

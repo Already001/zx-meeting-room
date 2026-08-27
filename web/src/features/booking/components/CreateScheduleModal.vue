@@ -1,10 +1,11 @@
 <template>
   <Teleport to="body">
     <div class="modal-overlay" @click="emit('close')">
-      <div
+      <form
         class="bottom-sheet"
         :class="{ 'sheet-fullscreen': fullScreen }"
         @click.stop
+        @submit.prevent="handleSubmit"
       >
         <div class="sheet-drag-handle" />
         <div class="sheet-header">
@@ -19,13 +20,12 @@
           </button>
           <span class="sheet-title">新建日程</span>
           <button
-            type="button"
+            type="submit"
             class="navbar-action"
             style="font-weight: 500"
             :disabled="submitting"
-            @click="handleSubmit"
           >
-            完成
+            {{ submitting ? "提交中…" : "完成" }}
           </button>
         </div>
 
@@ -35,9 +35,12 @@
               <input
                 v-model="title"
                 type="text"
+                name="title"
+                autocomplete="off"
                 class="form-input-text"
                 maxlength="50"
-                placeholder="填写会议主题..."
+                aria-label="会议主题"
+                placeholder="例如：周会…"
                 style="font-size: 16px; font-weight: 500"
               />
             </div>
@@ -78,30 +81,35 @@
               <input
                 v-model="remark"
                 type="text"
+                name="remark"
+                autocomplete="off"
                 class="form-input-text"
                 maxlength="100"
-                placeholder="添加会议议程或备注"
+                aria-label="会议说明"
+                placeholder="例如：对齐议程…"
                 style="text-align: right"
               />
             </div>
             <label v-if="room.allowRecurring" class="form-cell">
               <span class="form-cell-label">每周重复</span>
-              <input v-model="repeatWeekly" type="checkbox" />
+              <input
+                v-model="repeatWeekly"
+                type="checkbox"
+                name="repeatWeekly"
+              />
             </label>
           </div>
+          <p v-if="formError" class="form-inline-error" aria-live="polite">
+            {{ formError }}
+          </p>
         </div>
 
         <div class="sheet-footer">
-          <button
-            type="button"
-            class="btn-m-primary"
-            :disabled="submitting"
-            @click="handleSubmit"
-          >
-            提交预定
+          <button type="submit" class="btn-m-primary" :disabled="submitting">
+            {{ submitting ? "提交中…" : "提交预定" }}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   </Teleport>
 </template>
@@ -129,12 +137,14 @@ const title = ref("");
 const remark = ref("");
 const repeatWeekly = ref(false);
 const submitting = ref(false);
+const formError = ref("");
 const hostName = getUserName() || "";
 
 const handleSubmit = async () => {
   if (submitting.value) return;
+  formError.value = "";
   if (!getUserId()) {
-    showToastError("缺少用户信息，请重新登录");
+    formError.value = "缺少用户信息，请重新登录";
     return;
   }
   submitting.value = true;
@@ -151,7 +161,8 @@ const handleSubmit = async () => {
     });
     emit("success", createdCount(result));
   } catch (error) {
-    showToastError(error.msg || error.message || "预定失败");
+    formError.value = error.msg || error.message || "预定失败，请检查时段后重试";
+    showToastError(formError.value);
   } finally {
     submitting.value = false;
   }

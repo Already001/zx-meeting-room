@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/baoyu-design/SKILL.md",
       "computedHash": "b341b136ba0e4cb2e9839ca5ec20b6ed33e86009342fb7ce25830fb2c8097b2d"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "f3bc47f890f42a44db1007ab390709ec368e4b8c089baee6b0007182236ac474"
     }
   }
 }

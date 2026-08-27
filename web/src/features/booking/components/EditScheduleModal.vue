@@ -1,10 +1,11 @@
 <template>
   <Teleport to="body">
     <div class="modal-overlay" @click="emit('close')">
-      <div
+      <form
         class="bottom-sheet"
         :class="{ 'sheet-fullscreen': fullScreen }"
         @click.stop
+        @submit.prevent="handleSubmit"
       >
         <div class="sheet-drag-handle" />
         <div class="sheet-header">
@@ -19,13 +20,12 @@
           </button>
           <span class="sheet-title">修改预定</span>
           <button
-            type="button"
+            type="submit"
             class="navbar-action"
             style="font-weight: 500"
             :disabled="submitting"
-            @click="handleSubmit"
           >
-            保存
+            {{ submitting ? "保存中…" : "保存" }}
           </button>
         </div>
 
@@ -35,9 +35,12 @@
               <input
                 v-model="title"
                 type="text"
+                name="title"
+                autocomplete="off"
                 class="form-input-text"
                 maxlength="50"
-                placeholder="填写会议主题..."
+                aria-label="会议主题"
+                placeholder="例如：周会…"
                 style="font-size: 16px; font-weight: 500"
               />
             </div>
@@ -46,7 +49,13 @@
           <div class="form-group-card">
             <label class="form-cell">
               <span class="form-cell-label">会议室</span>
-              <select v-model="roomId" class="form-input-text" style="text-align: right">
+              <select
+                v-model="roomId"
+                name="roomId"
+                autocomplete="off"
+                class="form-input-text"
+                style="text-align: right"
+              >
                 <option v-for="room in roomOptions" :key="room.id" :value="room.id">
                   {{ room.name }}（{{ room.buildingName }} {{ room.floorName }}）
                 </option>
@@ -54,11 +63,24 @@
             </label>
             <label class="form-cell">
               <span class="form-cell-label">日期</span>
-              <input v-model="date" type="date" class="form-input-text" style="text-align: right" />
+              <input
+                v-model="date"
+                type="date"
+                name="date"
+                autocomplete="off"
+                class="form-input-text"
+                style="text-align: right"
+              />
             </label>
             <label class="form-cell">
               <span class="form-cell-label">开始</span>
-              <select v-model="start" class="form-input-text" style="text-align: right">
+              <select
+                v-model="start"
+                name="start"
+                autocomplete="off"
+                class="form-input-text"
+                style="text-align: right"
+              >
                 <option v-for="opt in timeOptions" :key="`s-${opt}`" :value="opt">
                   {{ opt }}
                 </option>
@@ -66,37 +88,43 @@
             </label>
             <label class="form-cell">
               <span class="form-cell-label">结束</span>
-              <select v-model="end" class="form-input-text" style="text-align: right">
+              <select
+                v-model="end"
+                name="end"
+                autocomplete="off"
+                class="form-input-text"
+                style="text-align: right"
+              >
                 <option v-for="opt in timeOptions" :key="`e-${opt}`" :value="opt">
                   {{ opt }}
                 </option>
               </select>
             </label>
-            <div class="form-cell">
+            <label class="form-cell">
               <span class="form-cell-label">会议说明</span>
               <input
                 v-model="remark"
                 type="text"
+                name="remark"
+                autocomplete="off"
                 class="form-input-text"
                 maxlength="100"
-                placeholder="添加会议议程或备注"
+                placeholder="例如：对齐议程…"
                 style="text-align: right"
               />
-            </div>
+            </label>
           </div>
+          <p v-if="formError" class="form-inline-error" aria-live="polite">
+            {{ formError }}
+          </p>
         </div>
 
         <div class="sheet-footer">
-          <button
-            type="button"
-            class="btn-m-primary"
-            :disabled="submitting"
-            @click="handleSubmit"
-          >
-            保存修改
+          <button type="submit" class="btn-m-primary" :disabled="submitting">
+            {{ submitting ? "保存中…" : "保存修改" }}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   </Teleport>
 </template>
@@ -122,6 +150,7 @@ const date = ref(props.booking.date);
 const start = ref(props.booking.start);
 const end = ref(props.booking.end);
 const submitting = ref(false);
+const formError = ref("");
 
 const timeOptions = Array.from({ length: 49 }, (_, i) => fromMinutes(i * 30));
 
@@ -143,8 +172,9 @@ const roomOptions = computed(() => {
 
 const handleSubmit = async () => {
   if (submitting.value) return;
+  formError.value = "";
   if (!getUserId()) {
-    showToastError("缺少用户信息，请重新登录");
+    formError.value = "缺少用户信息，请重新登录";
     return;
   }
   submitting.value = true;
@@ -160,7 +190,8 @@ const handleSubmit = async () => {
     });
     emit("success");
   } catch (error) {
-    showToastError(error.msg || error.message || "修改失败");
+    formError.value = error.msg || error.message || "修改失败，请检查时段后重试";
+    showToastError(formError.value);
   } finally {
     submitting.value = false;
   }

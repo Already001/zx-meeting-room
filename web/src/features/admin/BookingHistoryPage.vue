@@ -2,13 +2,15 @@
   <AdminShell active="history">
     <div class="flex flex-col gap-16px">
       <div>
-        <h1 class="m-0 text-20px font-600 leading-32px text-black">预定记录</h1>
+        <h1 class="m-0 text-20px font-600 leading-32px text-black text-pretty">
+          预定记录
+        </h1>
         <p class="mt-4px mb-0 text-13px leading-18px text-grayDark">
           查看全部预定历史，点开一行可看创建 / 修改 / 释放审计
         </p>
       </div>
       <div class="zx-card !p-0 overflow-hidden">
-        <el-table v-loading="loading" :data="list" class="w-full">
+        <el-table v-loading="loading" :data="list" class="w-full booking-history-table">
           <el-table-column prop="date" label="日期" width="120" />
           <el-table-column label="时段" width="130">
             <template #default="{ row }">{{ row.start }} - {{ row.end }}</template>
@@ -58,7 +60,8 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { listAdminBookings, listBookingAudit } from "@/server/module/booking";
 import { showToastError } from "@/utils";
 import { MINE_STATUS_LABEL } from "@/features/booking/mine";
@@ -72,10 +75,12 @@ const ACTION_LABEL = {
 };
 
 const { ready, isAdmin } = useAdminGate();
+const route = useRoute();
+const router = useRouter();
 const loading = ref(false);
 const list = ref([]);
 const total = ref(0);
-const page = ref(1);
+const page = computed(() => Math.max(1, Number(route.query.page) || 1));
 const pageSize = 20;
 const auditOpen = ref(false);
 const audits = ref([]);
@@ -92,14 +97,14 @@ const load = async () => {
   } catch (error) {
     list.value = [];
     total.value = 0;
-    showToastError(error.msg || error.message || "加载失败");
+    showToastError(error.msg || error.message || "加载失败，请稍后重试");
   } finally {
     loading.value = false;
   }
 };
 
 const setPage = (next) => {
-  page.value = next;
+  router.replace({ query: { ...route.query, page: String(next) } });
 };
 
 const openAudit = async (row) => {
@@ -109,19 +114,17 @@ const openAudit = async (row) => {
     const data = await listBookingAudit(row.id);
     audits.value = Array.isArray(data) ? data : [];
   } catch (error) {
-    showToastError(error.msg || error.message || "加载审计失败");
+    showToastError(error.msg || error.message || "加载审计失败，请稍后重试");
   }
 };
 
-watch([ready, isAdmin], ([isReady, admin]) => {
+watch([ready, isAdmin, page], ([isReady, admin]) => {
   if (isReady && admin) load();
 });
-
-watch(page, () => {
-  if (ready.value && isAdmin.value) load();
-});
-
-onMounted(() => {
-  if (ready.value && isAdmin.value) load();
-});
 </script>
+
+<style scoped>
+.booking-history-table {
+  font-variant-numeric: tabular-nums;
+}
+</style>

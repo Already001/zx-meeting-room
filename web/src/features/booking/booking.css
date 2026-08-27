@@ -126,12 +126,16 @@
   min-width: 0;
   height: 100%;
   border: none;
-  outline: none;
   background: transparent;
   font-family: inherit;
   font-size: 14px;
   color: var(--color-ink);
   user-select: text;
+}
+
+.m-search input:focus:not(:focus-visible) {
+  outline: none;
+}
 }
 
 .m-search input::placeholder {
@@ -607,6 +611,8 @@
   flex-direction: column;
   animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: manipulation;
 }
 
 .sheet-fullscreen {
@@ -655,6 +661,7 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 16px;
+  overscroll-behavior: contain;
 }
 
 .sheet-group-title {
@@ -776,12 +783,22 @@
 
 .form-input-text {
   border: none;
-  outline: none;
   font-size: 14px;
   color: var(--color-ink);
   width: 100%;
   font-family: inherit;
   background: transparent;
+}
+
+.form-input-text:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.form-inline-error {
+  margin: 8px 4px 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-danger);
 }
 
 .bookings-dialog-body {
@@ -1237,7 +1254,6 @@
 
 .pc-search input {
   border: none;
-  outline: none;
   width: 100%;
   min-width: 0;
   font-family: inherit;
@@ -1245,6 +1261,10 @@
   color: var(--color-ink);
   background: transparent;
   user-select: text;
+}
+
+.pc-search input:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .pc-icon-btn {
@@ -1927,7 +1947,7 @@ html[data-device="mobile"] .ai-buddy-dock {
   color: var(--color-ink);
 }
 
-.ai-buddy-composer input:focus {
+.ai-buddy-composer input:focus:not(:focus-visible) {
   outline: none;
 }
 
