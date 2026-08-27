@@ -1,5 +1,5 @@
 import type { BoardRoom } from "./booking.js";
-import { fromMinutes, nextOpen, toMinutes } from "./time.js";
+import { addDays, fromMinutes, nextOpen, toMinutes } from "./time.js";
 
 export type SearchQuery = {
   date: string;
@@ -142,6 +142,12 @@ export const searchAvailability = (
 
   for (const room of rooms) {
     if (!matchesFilters(room, query)) continue;
+
+    // 与 createBooking 一致：查询日期早于今天则跳过（该时段已过期）
+    if (query.date < now.date) continue;
+
+    // 与 createBooking 一致：超出可提前预定范围则跳过
+    if (query.date > addDays(now.date, room.bookAheadDays)) continue;
 
     let rangeStart = toMinutes(room.openStart);
     const rangeEnd = toMinutes(room.openEnd);

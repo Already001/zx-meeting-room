@@ -48,3 +48,13 @@ test("today clips starts before nextOpen", () => {
   const res = searchAvailability([room([])], { date: "2026-08-27", durationMin: 60 }, now);
   assert.ok(res.rooms[0].slots.every((s) => s.start >= "10:00"));
 });
+
+test("past date skips room (该时段已过期)", () => {
+  const res = searchAvailability([room([])], { date: "2026-08-26", durationMin: 60 }, now);
+  assert.equal(res.rooms.length, 0);
+});
+
+test("date beyond bookAheadDays skips room (超出可提前预定范围)", () => {
+  const res = searchAvailability([room([])], { date: "2026-09-04", durationMin: 60 }, now);
+  assert.equal(res.rooms.length, 0);
+});
