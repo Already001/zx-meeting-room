@@ -10,7 +10,6 @@
       :facility-options="facilityOptions"
       :capacity-options="CAPACITY_OPTIONS"
       :show-host="showHost"
-      :show-legend="showLegend"
       :is-admin="isAdmin"
       :mine-open="mine.open.value"
       @update:keyword="keyword = $event"
@@ -21,9 +20,7 @@
       @today="goToday"
       @reset="resetFilters"
       @toggle-host="showHost = !showHost"
-      @toggle-legend="showLegend = !showLegend"
       @open-mine="toggleMine"
-      @refresh="onRefresh"
       @admin="router.push('/admin')"
     />
 
@@ -36,15 +33,8 @@
       @update:selection="selection = $event"
       @commit="handleCommitRange"
       @notice="onNotice"
-      @open-room="detailRoom = $event"
     />
 
-    <RoomDetailModal
-      v-if="detailRoom"
-      :room="detailRoom"
-      @close="detailRoom = null"
-      @book="handleBookFromDetail"
-    />
     <CreateScheduleModal
       v-if="bookingRoom && bookingRange"
       :room="bookingRoom"
@@ -89,15 +79,12 @@ import PcTimelineBoard from "./components/PcTimelineBoard.vue";
 import CreateScheduleModal from "./components/CreateScheduleModal.vue";
 import EditScheduleModal from "./components/EditScheduleModal.vue";
 import MyBookingsModal from "./components/MyBookingsModal.vue";
-import RoomDetailModal from "./components/RoomDetailModal.vue";
 import AiBuddyFab from "./components/AiBuddyFab.vue";
 import "./booking.css";
 
 const router = useRouter();
 const isAdmin = ref(false);
 const showHost = ref(false);
-const showLegend = ref(false);
-const detailRoom = ref(null);
 const bookingRoom = ref(null);
 const bookingRange = ref(null);
 const editing = ref(null);
@@ -169,11 +156,6 @@ const resetFilters = () => {
   selection.value = null;
 };
 
-const onRefresh = async () => {
-  await reload();
-  showToastSuccess("已刷新会议室占用");
-};
-
 const closeMine = () => {
   mine.open.value = false;
 };
@@ -208,7 +190,6 @@ const closeBooking = () => {
 
 const handleBookingSuccess = async (count = 1) => {
   closeBooking();
-  detailRoom.value = null;
   selection.value = null;
   showToastSuccess(
     count > 1 ? `已预定 ${count} 场，可在「我的预定」查看` : "预定成功，已加入「我的预定」"
@@ -225,15 +206,6 @@ const handleEditSuccess = async () => {
   editing.value = null;
   showToastSuccess("预定已更新");
   await Promise.all([reload(), mine.reload()]);
-};
-
-const handleBookFromDetail = (room) => {
-  if (selection.value && selection.value.roomId === room.id) {
-    detailRoom.value = null;
-    handleCommitRange(room, selection.value);
-    return;
-  }
-  showToastError("请先在时间条上轻点选择空闲时段");
 };
 
 const onRelease = async (booking) => {

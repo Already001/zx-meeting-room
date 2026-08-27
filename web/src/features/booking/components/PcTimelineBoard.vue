@@ -4,6 +4,7 @@
     @pointermove="handlePointerMove"
     @pointerup="handlePointerUp"
     @pointercancel="handlePointerUp"
+    @scroll="closeRoomPop"
   >
     <div class="tl-board-inner">
       <div class="tl-row tl-head-row">
@@ -14,35 +15,40 @@
             :key="h"
             class="tl-axis-label"
             :class="{
-              'tl-axis-label-first': h === TL.LIST_HOURS[0],
-              'tl-axis-label-last': h === TL.LIST_HOURS.at(-1)
+              'tl-axis-label-first': h === 0,
+              'tl-axis-label-last': h === 23
             }"
-            :style="{ left: TL.listPct(h * 60) }"
+            :style="{ left: TL.pct(h * 60) }"
           >
             {{ String(h).padStart(2, "0") }}:00
           </span>
           <span
-            v-if="showNow && rooms.length > 0"
+            v-if="showNow"
             class="tl-axis-now"
-            :style="{ left: TL.listPct(nowMin) }"
+            :style="{ left: TL.pct(nowMin) }"
           >
             {{ fromMinutes(nowMin) }}
           </span>
           <span
             v-if="selection"
             class="tl-axis-pick"
-            :style="{
-              left: TL.listPct((selection.start + selection.end) / 2)
-            }"
+            :style="{ left: TL.pct(selection.start) }"
           >
-            {{ fromMinutes(selection.start) }}-{{ fromMinutes(selection.end) }}
+            {{ fromMinutes(selection.start) }}
+          </span>
+          <span
+            v-if="selection"
+            class="tl-axis-pick"
+            :style="{ left: TL.pct(selection.end) }"
+          >
+            {{ fromMinutes(selection.end) }}
           </span>
         </div>
       </div>
 
       <div class="tl-body">
         <div
-          v-if="rooms.length > 0 && !(selection && selection.confirmed)"
+          v-if="showNow || selection"
           class="tl-guides"
         >
           <div class="tl-room-cell tl-guides-spacer" />
@@ -50,24 +56,19 @@
             <span
               v-if="showNow"
               class="tl-line-now"
-              :style="{ left: TL.listPct(nowMin) }"
+              :style="{ left: TL.pct(nowMin) }"
             />
             <template v-if="selection">
               <span
                 class="tl-line-pick"
-                :style="{ left: TL.listPct(selection.start) }"
+                :style="{ left: TL.pct(selection.start) }"
               />
               <span
                 class="tl-line-pick"
-                :style="{ left: TL.listPct(selection.end) }"
+                :style="{ left: TL.pct(selection.end) }"
               />
             </template>
           </div>
-        </div>
-
-        <div v-if="rooms.length === 0" class="pc-empty">
-          <span class="pc-empty-title">没有符合筛选条件的会议室</span>
-          <span class="pc-empty-caption">试试调整建筑、楼层或设施条件</span>
         </div>
 
         <div
@@ -79,34 +80,37 @@
           <button
             type="button"
             class="tl-room-cell"
-            style="cursor: pointer; border: none; text-align: left"
-            @click="emit('openRoom', room)"
+            @click="toggleRoomPop(room, $event.currentTarget)"
           >
             <div class="tl-room-name">
-              <span>{{ room.name }}</span>
+              <span class="tl-room-name-text">{{ room.name }}</span>
+              <span class="tl-room-badge">常用</span>
             </div>
-            <div class="tl-room-meta">
-              {{ room.capacity }}人 · {{ (room.facilities || []).join("/") }}
+            <div class="tl-room-meta-row">
+              <span class="tl-room-meta">
+                {{ room.capacity }}人 {{ (room.facilities || []).join("/") }}
+              </span>
+              <span class="tl-room-icons" aria-hidden="true">
+                <RoomPhoneIcon />
+                <RoomScreenIcon />
+              </span>
             </div>
           </button>
 
           <div class="tl-track" @pointerdown="handlePointerDown(room, $event)">
             <span
-              v-if="isToday && pastEnd > TL.LIST_START"
+              v-if="isToday && nowMin > 0"
               class="tl-past"
-              :style="{
-                left: TL.listPct(TL.LIST_START),
-                width: TL.listWidth(TL.LIST_START, pastEnd)
-              }"
+              :style="{ width: TL.pct(nowMin) }"
             />
             <div
-              v-for="ev in visibleEvents(room)"
+              v-for="ev in room.busyEvents || []"
               :key="`${room.id}-${ev.start}-${ev.end}-${ev.title}`"
               class="tl-event"
               :class="{ mine: ev.mine }"
               :style="{
-                left: TL.listPct(toMinutes(ev.start)),
-                width: TL.listWidth(toMinutes(ev.start), toMinutes(ev.end))
+                left: TL.pct(toMinutes(ev.start)),
+                width: TL.pct(toMinutes(ev.end) - toMinutes(ev.start))
               }"
               @mouseenter="showTip(ev, $event.currentTarget)"
               @mouseleave="tip = null"
@@ -123,17 +127,55 @@
               v-if="selection && selection.roomId === room.id"
               class="tl-picking"
               :style="{
-                left: TL.listPct(selection.start),
-                width: TL.listWidth(selection.start, selection.end)
+                left: TL.pct(selection.start),
+                width: TL.pct(selection.end - selection.start)
               }"
             >
-              <span class="tl-picking-label">
-                {{ fromMinutes(selection.start) }}-{{
-                  fromMinutes(selection.end)
-                }}
-              </span>
+              <div
+                v-if="selection.confirmed && !bookingOpen"
+                class="tl-confirm-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tl-confirm-title"
+                @pointerdown.stop
+                @click.stop
+              >
+                <p id="tl-confirm-title" class="tl-confirm-text">
+                  {{ fromMinutes(selection.start) }}-{{
+                    fromMinutes(selection.end)
+                  }}
+                  {{ TL.duration(selection.start, selection.end) }}
+                </p>
+                <div class="tl-confirm-actions">
+                  <button
+                    type="button"
+                    class="tl-btn-ghost"
+                    @click="emit('update:selection', null)"
+                  >
+                    取消
+                  </button>
+                  <button
+                    ref="confirmBtn"
+                    type="button"
+                    class="tl-btn-primary"
+                    @click="emit('commit', confirmRoom, selection)"
+                  >
+                    确定
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+
+        <div class="tl-row tl-fill" aria-hidden="true">
+          <div class="tl-room-cell" />
+          <div class="tl-track" />
+        </div>
+
+        <div v-if="rooms.length === 0" class="pc-empty">
+          <span class="pc-empty-title">没有符合筛选条件的会议室</span>
+          <span class="pc-empty-caption">试试调整建筑、楼层或设施条件</span>
         </div>
       </div>
     </div>
@@ -153,60 +195,12 @@
       </div>
     </Teleport>
 
-    <Teleport
-      v-if="selection?.confirmed && !bookingOpen && confirmRoom"
-      to="body"
-    >
-      <div
-        class="tl-confirm-overlay"
-        @click="emit('update:selection', null)"
-        @pointerdown.stop
-      >
-        <div
-          class="tl-confirm-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="tl-confirm-title"
-          @click.stop
-        >
-          <div class="tl-confirm-head">
-            <span id="tl-confirm-title" class="type-title-sm">确认预定</span>
-          </div>
-          <div class="tl-confirm-body">
-            <div class="tl-confirm-kv">
-              <span>会议室</span>
-              <strong>{{ confirmRoom.name }}</strong>
-            </div>
-            <div class="tl-confirm-kv">
-              <span>时段</span>
-              <strong>
-                {{ fromMinutes(selection.start) }}-{{
-                  fromMinutes(selection.end)
-                }}
-                · {{ TL.duration(selection.start, selection.end) }}
-              </strong>
-            </div>
-          </div>
-          <div class="tl-confirm-actions">
-            <button
-              type="button"
-              class="tl-btn-ghost"
-              @click="emit('update:selection', null)"
-            >
-              取消
-            </button>
-            <button
-              ref="confirmBtn"
-              type="button"
-              class="tl-btn-primary"
-              @click="emit('commit', confirmRoom, selection)"
-            >
-              确定
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <PcRoomPopover
+      v-if="roomPop"
+      :room="roomPop.room"
+      :left="roomPop.left"
+      :top="roomPop.top"
+    />
   </div>
 </template>
 
@@ -220,6 +214,9 @@ import {
   watch
 } from "vue";
 import { fromMinutes, toMinutes, slotWindow, TL } from "../time";
+import PcRoomPopover from "./PcRoomPopover.vue";
+import RoomPhoneIcon from "./RoomPhoneIcon.vue";
+import RoomScreenIcon from "./RoomScreenIcon.vue";
 
 const props = defineProps({
   rooms: { type: Array, default: () => [] },
@@ -229,7 +226,7 @@ const props = defineProps({
   bookingOpen: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(["update:selection", "commit", "notice", "openRoom"]);
+const emit = defineEmits(["update:selection", "commit", "notice"]);
 
 const shanghaiNowMinutes = () => {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -248,6 +245,7 @@ const dragRef = ref(null);
 const lastSelection = ref(null);
 const tip = ref(null);
 const confirmBtn = ref(null);
+const roomPop = ref(null);
 
 let timer = 0;
 
@@ -261,11 +259,15 @@ onMounted(() => {
   timer = window.setInterval(() => {
     nowMin.value = shanghaiNowMinutes();
   }, 30000);
+  document.addEventListener("pointerdown", onDocPointerDown);
+  document.addEventListener("keydown", onRoomPopKey);
 });
 
 onBeforeUnmount(() => {
   window.clearInterval(timer);
   window.removeEventListener("keydown", onConfirmKey);
+  document.removeEventListener("pointerdown", onDocPointerDown);
+  document.removeEventListener("keydown", onRoomPopKey);
 });
 
 const axisHourHidden = (hourMin) => {
@@ -279,27 +281,42 @@ const axisHourHidden = (hourMin) => {
   return near(hourMin, mid, 48);
 };
 
-const pastEnd = computed(() =>
-  props.isToday ? Math.min(nowMin.value, TL.LIST_END) : TL.LIST_START
-);
-
 const showNow = computed(
-  () =>
-    props.isToday &&
-    nowMin.value >= TL.LIST_START &&
-    nowMin.value <= TL.LIST_END
+  () => props.isToday && nowMin.value > 0 && nowMin.value < TL.DAY_MIN
 );
 
 const visibleHours = computed(() =>
-  TL.LIST_HOURS.filter((h) => !axisHourHidden(h * 60))
+  TL.HOURS.filter((h) => !axisHourHidden(h * 60))
 );
 
-const visibleEvents = (room) =>
-  (room.busyEvents || []).filter((ev) => {
-    const start = toMinutes(ev.start);
-    const end = toMinutes(ev.end);
-    return end > TL.LIST_START && start < TL.LIST_END;
-  });
+const closeRoomPop = () => {
+  roomPop.value = null;
+};
+
+const toggleRoomPop = (room, el) => {
+  if (roomPop.value?.room.id === room.id) {
+    closeRoomPop();
+    return;
+  }
+  const rect = el.getBoundingClientRect();
+  roomPop.value = {
+    room,
+    left: Math.round(rect.right + 8),
+    top: Math.round(rect.top)
+  };
+};
+
+const onDocPointerDown = (e) => {
+  if (!roomPop.value) return;
+  if (e.target.closest(".tl-room-pop") || e.target.closest(".tl-room-cell")) {
+    return;
+  }
+  closeRoomPop();
+};
+
+const onRoomPopKey = (e) => {
+  if (e.key === "Escape") closeRoomPop();
+};
 
 const confirmRoom = computed(() => {
   const sel = props.selection;
@@ -309,6 +326,10 @@ const confirmRoom = computed(() => {
 
 const handlePointerDown = (room, e) => {
   if (e.button !== 0) return;
+  if (props.selection?.confirmed) {
+    emit("update:selection", null);
+    return;
+  }
   if (e.target.closest(".tl-event") || e.target.closest(".tl-confirm-card")) {
     if (e.target.closest(".tl-event")) {
       emit("notice", "该时段已被占用，请选择空闲区域");
@@ -318,7 +339,7 @@ const handlePointerDown = (room, e) => {
 
   const track = e.currentTarget;
   const rect = track.getBoundingClientRect();
-  const anchor = TL.minuteAtList(rect, e.clientX);
+  const anchor = TL.minuteAt(rect, e.clientX);
   if (props.isToday && anchor < nowMin.value) {
     emit("notice", "该时段已过期");
     return;
@@ -330,9 +351,7 @@ const handlePointerDown = (room, e) => {
 
   const [low, high] = slotWindow(room, anchor, {
     isToday: props.isToday,
-    nowMin: nowMin.value,
-    listStart: TL.LIST_START,
-    listEnd: TL.LIST_END
+    nowMin: nowMin.value
   });
   if (high - low < TL.SNAP) {
     emit("notice", "剩余空闲不足 30 分钟");
@@ -361,7 +380,7 @@ const handlePointerDown = (room, e) => {
 const handlePointerMove = (e) => {
   const drag = dragRef.value;
   if (!drag) return;
-  const minute = TL.minuteAtList(drag.rect, e.clientX);
+  const minute = TL.minuteAt(drag.rect, e.clientX);
   let start = Math.min(drag.anchor, minute);
   let end = Math.max(drag.anchor, minute);
   if (end === start) end = start + TL.SNAP;

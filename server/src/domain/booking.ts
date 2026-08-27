@@ -77,6 +77,7 @@ export type BoardEvent = {
 export type BoardRoom = {
   id: string;
   name: string;
+  groupName: string | null;
   buildingName: string;
   floorName: string;
   capacity: number;
@@ -433,6 +434,7 @@ export const getBoard = (
   const rooms: BoardRoom[] = roomRows.map((row) => ({
     id: row.id,
     name: row.name,
+    groupName: row.group_name,
     buildingName: row.building_name,
     floorName: row.floor_name,
     capacity: row.capacity,
