@@ -42,14 +42,6 @@
                 <button
                   v-if="canChangeBooking(b.status)"
                   type="button"
-                  class="booking-edit"
-                  @click="emit('edit', b)"
-                >
-                  修改
-                </button>
-                <button
-                  v-if="canChangeBooking(b.status)"
-                  type="button"
                   class="booking-release"
                   @click="emit('release', b)"
                 >
@@ -72,7 +64,7 @@ defineProps({
   bookings: { type: Array, default: () => [] }
 });
 
-const emit = defineEmits(["close", "release", "edit"]);
+const emit = defineEmits(["close", "release"]);
 
 const statusLabel = (status) => MINE_STATUS_LABEL[status] || status;
 

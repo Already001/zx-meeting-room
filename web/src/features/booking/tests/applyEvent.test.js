@@ -110,7 +110,14 @@ test("confirm suggest need_more and error each replace card", () => {
   });
 });
 
-test("booked collapses panel with happy expression", () => {
+test("booked keeps panel open with success card and happy expression", () => {
+  const slot = {
+    roomId: "r1",
+    roomName: "星海",
+    date: "2026-08-27",
+    start: "14:00",
+    end: "15:00"
+  };
   const prev = {
     ...emptyAgentUi(),
     open: true,
@@ -122,13 +129,20 @@ test("booked collapses panel with happy expression", () => {
   const next = applyAgentEvent(prev, {
     type: "booked",
     bookingId: "b1",
+    title: "评审会",
+    slot,
     expression: "happy"
   });
-  assert.equal(next.open, false);
-  assert.equal(next.card, null);
+  assert.equal(next.open, true);
   assert.equal(next.status, "");
   assert.equal(next.expression, "happy");
   assert.equal(next.sessionId, "sess-1");
+  assert.deepEqual(next.card, {
+    type: "booked",
+    bookingId: "b1",
+    title: "评审会",
+    slot
+  });
 });
 
 test("closed collapses panel with down expression", () => {

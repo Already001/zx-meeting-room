@@ -40,7 +40,7 @@
                 class="form-input-text"
                 maxlength="50"
                 aria-label="会议主题"
-                placeholder="例如：周会…"
+                :placeholder="titlePlaceholder"
                 style="font-size: 16px; font-weight: 500"
               />
             </div>
@@ -119,6 +119,7 @@ import { ref } from "vue";
 import { createBooking } from "@/server/module/booking";
 import { createdCount } from "../mine";
 import { fromMinutes } from "../time";
+import { defaultBookingTitle } from "../defaultTitle";
 import { getUserId, getUserName, showToastError } from "@/utils";
 
 const props = defineProps({
@@ -139,6 +140,7 @@ const repeatWeekly = ref(false);
 const submitting = ref(false);
 const formError = ref("");
 const hostName = getUserName() || "";
+const titlePlaceholder = defaultBookingTitle(hostName);
 
 const handleSubmit = async () => {
   if (submitting.value) return;
@@ -155,7 +157,7 @@ const handleSubmit = async () => {
       date: props.dateIso,
       start: fromMinutes(props.start),
       end: fromMinutes(props.end),
-      title: trimmed || "无主题会议",
+      title: trimmed || defaultBookingTitle(hostName),
       remark: remark.value.trim(),
       repeatWeekly: Boolean(props.room.allowRecurring && repeatWeekly.value)
     });

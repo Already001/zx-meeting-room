@@ -162,11 +162,21 @@ test("impossible calendar date is M4000", () => {
   }
 });
 
-test("empty title becomes 无主题会议", () => {
+test("empty title becomes 张三预定的会议", () => {
   const { db, roomId } = setup();
   const res = book(db, roomId, "10:00", "11:00", { title: "" });
   assert.equal(res.ok, true);
-  if (res.ok) assert.equal(res.value.title, "无主题会议");
+  if (res.ok) assert.equal(res.value.title, "张三预定的会议");
+});
+
+test("empty title without userName becomes 同事预定的会议", () => {
+  const { db, roomId } = setup();
+  const res = book(db, roomId, "13:00", "14:00", {
+    title: "",
+    user: { ...host, userId: "u-anon", userName: "" }
+  });
+  assert.equal(res.ok, true);
+  if (res.ok) assert.equal(res.value.title, "同事预定的会议");
 });
 
 test("title longer than 50 is rejected", () => {

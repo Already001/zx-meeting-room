@@ -1,8 +1,8 @@
 /* 时间轴专用令牌（web tokens.css 未收录） */
 :root {
   --color-primary-light: #ebf2ff;
-  --timeline-busy: var(--color-warning-bg);
-  --timeline-busy-text: var(--color-overdue);
+  --timeline-busy: #ffeccc;
+  --timeline-busy-text: var(--color-ink);
   --timeline-mine: var(--color-primary-bg);
   --timeline-mine-text: var(--color-primary);
   --timeline-free: var(--color-canvas);
@@ -1862,11 +1862,11 @@ button.tl-room-cell {
 
 .tl-event {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
+  top: 0;
+  bottom: 0;
   background: var(--timeline-busy);
-  border-left: 3px solid var(--color-warning);
-  border-radius: var(--radius-xs);
+  border: none;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1878,10 +1878,10 @@ button.tl-room-cell {
 }
 
 .tl-event.mine {
-  background: var(--timeline-mine);
-  border-left-color: var(--color-primary);
+  background: var(--color-primary);
 }
-.tl-event:hover { filter: brightness(0.97); }
+
+.tl-event:hover { filter: brightness(0.94); }
 
 .tl-event-time,
 .tl-event-title {
@@ -1894,7 +1894,9 @@ button.tl-room-cell {
 }
 
 .tl-event.mine .tl-event-time,
-.tl-event.mine .tl-event-title { color: var(--color-primary); }
+.tl-event.mine .tl-event-title {
+  color: var(--color-on-primary);
+}
 
 .tl-picking {
   position: absolute;
@@ -2060,20 +2062,29 @@ html[data-device="pc"] {
   fill: #1a1a1e;
 }
 
-.ai-buddy[data-expression="sorry"] .ai-buddy-eye {
-  rx: 8px;
-  ry: 8px;
+.ai-buddy.is-morphing .ai-buddy-svg {
+  animation: ai-buddy-react 0.4s var(--ease-out);
 }
 
-.ai-buddy[data-expression="down"] .ai-buddy-expr {
-  transform: translateY(5px);
+@keyframes ai-buddy-react {
+  0% {
+    transform: scale(1);
+  }
+  28% {
+    transform: scale(0.9, 1.08);
+  }
+  62% {
+    transform: scale(1.06, 0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
-.ai-buddy[data-expression="happy"] .ai-buddy-eye {
-  height: 5px;
-  y: 29px;
-  rx: 2.5px;
-  ry: 2.5px;
+@media (prefers-reduced-motion: reduce) {
+  .ai-buddy.is-morphing .ai-buddy-svg {
+    animation: none;
+  }
 }
 
 .ai-buddy-dock {
@@ -2122,7 +2133,6 @@ html[data-device="mobile"] .ai-buddy-dock {
   font: inherit;
   font-size: 13px;
   line-height: 18px;
-  box-shadow: var(--shadow-light);
 }
 
 .ai-buddy-prompt:hover {
@@ -2216,6 +2226,7 @@ html[data-device="mobile"] .ai-buddy-dock {
   margin: 0;
   padding: 10px 14px;
   background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
   border-radius: 12px;
   box-shadow: var(--shadow-light);
   font-size: 13px;
@@ -2249,6 +2260,10 @@ html[data-device="mobile"] .ai-buddy-dock {
 
 .ai-buddy-card-error .ai-buddy-card-copy {
   color: var(--color-danger);
+}
+
+.ai-buddy-card-ok .ai-buddy-card-title {
+  color: var(--color-primary);
 }
 
 .ai-buddy-query-list {

@@ -221,17 +221,7 @@
       :bookings="mine.items.value"
       @close="mine.open.value = false"
       @release="onRelease"
-      @edit="onEdit"
     />
-    <EditScheduleModal
-      v-if="editing"
-      :booking="editing"
-      :rooms="rooms"
-      :full-screen="true"
-      @close="editing = null"
-      @success="handleEditSuccess"
-    />
-
     <ConfirmSheet
       v-if="confirmPayload"
       :title="confirmPayload.title"
@@ -257,7 +247,6 @@ import MobileDateSheet from "./components/MobileDateSheet.vue";
 import MobileFilterSheet from "./components/MobileFilterSheet.vue";
 import MobileMoreSheet from "./components/MobileMoreSheet.vue";
 import CreateScheduleModal from "./components/CreateScheduleModal.vue";
-import EditScheduleModal from "./components/EditScheduleModal.vue";
 import MyBookingsModal from "./components/MyBookingsModal.vue";
 import RoomDetailModal from "./components/RoomDetailModal.vue";
 import OccupancySheet from "./components/OccupancySheet.vue";
@@ -287,7 +276,6 @@ const detailRoom = ref(null);
 const occupancy = ref(null);
 const bookingRoom = ref(null);
 const bookingRange = ref(null);
-const editing = ref(null);
 const confirmPayload = ref(null);
 
 const dateChip = computed(() => {
@@ -375,16 +363,6 @@ const handleBookingSuccess = async (count = 1) => {
     count > 1 ? `已预定 ${count} 场，可在「我的预定」查看` : "预定成功，已加入「我的预定」"
   );
   mine.open.value = true;
-  await Promise.all([reload(), mine.reload()]);
-};
-
-const onEdit = (booking) => {
-  editing.value = booking;
-};
-
-const handleEditSuccess = async () => {
-  editing.value = null;
-  showToastSuccess("预定已更新");
   await Promise.all([reload(), mine.reload()]);
 };
 

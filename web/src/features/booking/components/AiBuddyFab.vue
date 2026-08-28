@@ -4,7 +4,11 @@
       ref="fabRef"
       type="button"
       class="ai-buddy"
-      :class="{ 'is-lifted': lifted, 'is-open': dockOpen }"
+      :class="{
+        'is-lifted': lifted,
+        'is-open': dockOpen,
+        'is-morphing': morphing
+      }"
       :data-expression="ui.expression"
       aria-label="会议室助手"
       :aria-expanded="dockOpen"
@@ -27,10 +31,10 @@
           >
             <feDropShadow
               dx="0"
-              dy="4"
-              stdDeviation="3.5"
-              flood-color="#0a0a0c"
-              flood-opacity="0.28"
+              dy="3"
+              stdDeviation="2.2"
+              flood-color="#1f2329"
+              flood-opacity="0.16"
             />
           </filter>
         </defs>
@@ -39,7 +43,7 @@
           :filter="`url(#${glowId})`"
           d="M32.2 5.2c15.4 0 26.6 10.8 26.6 26.6 0 15.6-11.2 27-26.8 27C16.4 58.8 5.4 47.8 5.4 31.8 5.4 16.4 16.8 5.2 32.2 5.2Z"
         />
-        <g class="ai-buddy-expr">
+        <g ref="exprRef" class="ai-buddy-expr">
           <g ref="eyesRef">
             <rect
               ref="leftEyeRef"
@@ -126,6 +130,23 @@
           >
             <p class="ai-buddy-card-copy">{{ ui.card.msg }}</p>
           </article>
+          <article
+            v-else-if="ui.card?.type === 'booked'"
+            class="ai-buddy-card ai-buddy-card-ok"
+            aria-label="预定成功"
+          >
+            <h3 class="ai-buddy-card-title">预定成功</h3>
+            <p class="ai-buddy-card-copy">{{ bookedSummary }}</p>
+            <div class="ai-buddy-card-actions">
+              <button
+                type="button"
+                class="ai-buddy-btn-primary"
+                @click="dismissBooked"
+              >
+                知道了
+              </button>
+            </div>
+          </article>
         </div>
       </div>
 
@@ -175,13 +196,16 @@
 </template>
 
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { getAgentSuggestions } from "@/server/module/agent";
-import { showToastSuccess } from "@/utils";
 import { applyAgentEvent, backFromConfirm, emptyAgentUi } from "../agent/applyEvent";
 import { appendDebugEntry, readDebugEnabled, writeDebugEnabled } from "../agent/debugLog";
 import { streamTurn } from "../agent/streamTurn";
 import { buildSuggestionTurnBody } from "../agent/suggestions";
+import { easeInOutCubic, lerpPose, morphSquash, poseFor } from "../agent/buddyPose";
+import { defaultBookingTitle } from "../defaultTitle";
+import { waitHintAt, waitHintsForAction } from "../agent/waitHints";
+import { getUserName } from "@/utils";
 import AgentConfirmCard from "./AgentConfirmCard.vue";
 import AgentDebugPanel from "./AgentDebugPanel.vue";
 import AgentQueryCard from "./AgentQueryCard.vue";
@@ -195,9 +219,11 @@ const emit = defineEmits(["booked"]);
 const glowId = `ai-buddy-glow-${Math.random().toString(36).slice(2, 8)}`;
 
 const fabRef = ref(null);
+const exprRef = ref(null);
 const eyesRef = ref(null);
 const leftEyeRef = ref(null);
 const rightEyeRef = ref(null);
+const morphing = ref(false);
 const inputRef = ref(null);
 const dockOpen = ref(false);
 const draftText = ref("");
@@ -227,6 +253,14 @@ let idleTimer = 0;
 let turnAbort = null;
 let turnGen = 0;
 let suggestionsGeneration = 0;
+/** @type {ReturnType<typeof setInterval> | 0} */
+let waitTimer = 0;
+let waitIndex = 0;
+let pose = poseFor("idle");
+/** @type {{ from: ReturnType<typeof poseFor>, to: ReturnType<typeof poseFor>, elapsed: number, duration: number } | null} */
+let morph = null;
+let morphClassTimer = 0;
+let morphBlink = 1;
 
 function pushClientDebug(cat, title, data) {
   debugEntries.value = appendDebugEntry(
@@ -255,6 +289,44 @@ function abortInFlightTurn() {
   }
 }
 
+function stopWait() {
+  if (waitTimer) {
+    clearInterval(waitTimer);
+    waitTimer = 0;
+  }
+}
+
+/**
+ * @param {string | undefined} action
+ */
+function startWait(action) {
+  stopWait();
+  waitIndex = 0;
+  const hints = waitHintsForAction(action);
+  const apply = () => {
+    const hint = waitHintAt(hints, waitIndex);
+    waitIndex += 1;
+    ui.value = {
+      ...ui.value,
+      open: true,
+      status: hint.text,
+      expression: hint.expression
+    };
+  };
+  apply();
+  if (reduced) return;
+  waitTimer = setInterval(apply, 1100);
+}
+
+const bookedSummary = computed(() => {
+  const card = ui.value.card;
+  if (card?.type !== "booked") return "";
+  const title = card.title || defaultBookingTitle(getUserName());
+  const slot = card.slot;
+  if (!slot) return `${title} 已预定`;
+  return `${title} · ${slot.roomName} · ${slot.date} ${slot.start}–${slot.end}`;
+});
+
 function clearSuggestions() {
   suggestionsGeneration += 1;
   suggestions.value = [];
@@ -277,6 +349,47 @@ async function loadSuggestions() {
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
+}
+
+function beginPose(expression) {
+  const to = poseFor(expression);
+  window.clearTimeout(morphClassTimer);
+  if (reduced) {
+    pose = to;
+    morph = null;
+    morphBlink = 1;
+    morphing.value = false;
+    return;
+  }
+  morph = {
+    from: { ...pose },
+    to,
+    elapsed: 0,
+    duration: 380
+  };
+  morphing.value = false;
+  requestAnimationFrame(() => {
+    morphing.value = true;
+  });
+  morphClassTimer = window.setTimeout(() => {
+    morphing.value = false;
+  }, 420);
+}
+
+function tickMorph(dt) {
+  if (!morph) {
+    morphBlink = 1;
+    return;
+  }
+  morph.elapsed += dt;
+  const t = clamp(morph.elapsed / morph.duration, 0, 1);
+  pose = lerpPose(morph.from, morph.to, easeInOutCubic(t));
+  morphBlink = morphSquash(t);
+  if (t >= 1) {
+    pose = { ...morph.to };
+    morph = null;
+    morphBlink = 1;
+  }
 }
 
 function onPointerMove(event) {
@@ -328,19 +441,29 @@ function tickBlink(dt) {
 }
 
 function paint() {
+  const expr = exprRef.value;
   const eyes = eyesRef.value;
   const left = leftEyeRef.value;
   const right = rightEyeRef.value;
-  if (!eyes || !left || !right) return;
+  if (!expr || !eyes || !left || !right) return;
+
+  expr.setAttribute("transform", `translate(0 ${pose.shiftY})`);
   eyes.setAttribute("transform", `translate(${lookX * 5.2} ${lookY * 3.6})`);
-  left.setAttribute(
-    "transform",
-    `translate(23 30) scale(1 ${blink}) translate(-23 -30)`
-  );
-  right.setAttribute(
-    "transform",
-    `translate(41 30) scale(1 ${blink}) translate(-41 -30)`
-  );
+
+  const blinkY = blink * morphBlink;
+  const paintEye = (el, y, h, rx, cx) => {
+    el.setAttribute("y", String(y));
+    el.setAttribute("height", String(h));
+    el.setAttribute("rx", String(rx));
+    el.setAttribute("ry", String(rx));
+    const cy = y + h / 2;
+    el.setAttribute(
+      "transform",
+      `translate(${cx} ${cy}) scale(1 ${blinkY}) translate(${-cx} ${-cy})`
+    );
+  };
+  paintEye(left, pose.leftY, pose.leftH, pose.leftRx, 23);
+  paintEye(right, pose.rightY, pose.rightH, pose.rightRx, 41);
 }
 
 function loop(ms) {
@@ -351,11 +474,13 @@ function loop(ms) {
     lookX = 0;
     lookY = 0;
     blink = 1;
+    morphBlink = 1;
     paint();
     return;
   }
   aim(dt);
   tickBlink(dt);
+  tickMorph(dt);
   paint();
 }
 
@@ -374,8 +499,19 @@ watch(dockOpen, (open) => {
   }
 });
 
+watch(
+  () => ui.value.expression,
+  (expression) => {
+    beginPose(expression);
+  }
+);
+
 function toggle() {
   if (dockOpen.value) {
+    if (ui.value.card?.type === "booked") {
+      dismissBooked();
+      return;
+    }
     if (ui.value.sessionId || ui.value.card) {
       dismiss();
     } else {
@@ -401,13 +537,14 @@ function onEvent(event, gen) {
     debugEntries.value = appendDebugEntry(event.entry, debugEntries.value);
     return;
   }
+  if (event.type !== "status" && event.type !== "session" && event.type !== "debug") {
+    stopWait();
+  }
   ui.value = applyAgentEvent(ui.value, event);
   if (event.type === "booked") {
     clearSuggestions();
-    showToastSuccess("预定成功");
     emit("booked");
-    dockOpen.value = false;
-    scheduleIdle();
+    dockOpen.value = true;
     return;
   }
   if (event.type === "closed") {
@@ -428,10 +565,13 @@ async function runTurn(body) {
   const ac = new AbortController();
   turnAbort = ac;
   sending.value = true;
+  const action = typeof body.action === "string" ? body.action : "message";
+  if (action !== "cancel") startWait(action);
   try {
     await streamTurn(body, (e) => onEvent(e, gen), { signal: ac.signal });
   } catch (err) {
     if (ac.signal.aborted) return;
+    stopWait();
     ui.value = applyAgentEvent(ui.value, {
       type: "error",
       msg: err.msg || err.message || "请求失败",
@@ -444,6 +584,7 @@ async function runTurn(body) {
     });
     dockOpen.value = true;
   } finally {
+    stopWait();
     if (turnAbort === ac) turnAbort = null;
     sending.value = false;
   }
@@ -462,14 +603,31 @@ function sendMessage() {
 
 function startMessageTurn(body) {
   suggestions.value = [];
-  ui.value = {
-    ...ui.value,
-    open: true,
-    status: "正在理解",
-    expression: "focus"
-  };
+  ui.value = { ...ui.value, open: true, card: null, backCard: null, status: "" };
   dockOpen.value = true;
   runTurn(body);
+}
+
+function dismissBooked() {
+  if (ui.value.card?.type !== "booked") return;
+  abortInFlightTurn();
+  turnGen += 1;
+  clearSuggestions();
+  const sessionId = ui.value.sessionId;
+  ui.value = { ...emptyAgentUi(), expression: "happy" };
+  beginPose("happy");
+  dockOpen.value = false;
+  scheduleIdle();
+  if (!sessionId) return;
+  const ac = new AbortController();
+  turnAbort = ac;
+  streamTurn({ sessionId, action: "cancel" }, () => {}, { signal: ac.signal })
+    .catch(() => {
+      /* 本地已收起 */
+    })
+    .finally(() => {
+      if (turnAbort === ac) turnAbort = null;
+    });
 }
 
 function sendSuggestion(suggestion) {
@@ -542,10 +700,12 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   abortInFlightTurn();
+  stopWait();
   clearSuggestions();
   turnGen += 1;
   cancelAnimationFrame(raf);
   window.clearTimeout(idleTimer);
+  window.clearTimeout(morphClassTimer);
   window.removeEventListener("pointermove", onPointerMove);
   document.removeEventListener("pointerleave", onPointerLeave);
   window.removeEventListener("keydown", onHotkey);

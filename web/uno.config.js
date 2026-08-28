@@ -50,8 +50,9 @@ export default defineConfig({
       disabled: "#C9CFD8"
     },
     boxShadow: {
-      light: "0 0 4px 0 rgba(0, 0, 0, 0.1)",
-      heavy: "0 0 10px rgba(0, 0, 0, 0.3)",
+      light: "0 1px 2px rgba(31, 35, 41, 0.06)",
+      heavy:
+        "0 1px 2px rgba(31, 35, 41, 0.04), 0 8px 24px rgba(31, 35, 41, 0.08)",
       split: "0 -1px 0 0 #F4F6F8"
     }
   },

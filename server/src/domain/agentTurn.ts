@@ -55,7 +55,7 @@ export type TurnEvent =
     }
   | { type: "need_more"; text: string; expression: MeetingBuddyExpression }
   | { type: "error"; msg: string; code?: string; expression: MeetingBuddyExpression }
-  | { type: "booked"; bookingId: string; expression: MeetingBuddyExpression }
+  | { type: "booked"; bookingId: string; title: string; slot: MeetingFreeSlot; expression: MeetingBuddyExpression }
   | { type: "closed"; expression: MeetingBuddyExpression };
 
 export type { LlmPort } from "./agentLlm.js";
@@ -151,6 +151,7 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
       }
 
       const { slot } = draft;
+      const title = String(body.title ?? draft.title ?? "").trim();
       const result = createBooking(
         db,
         corpId,
@@ -160,7 +161,7 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
           date: slot.date,
           start: slot.start,
           end: slot.end,
-          title: body.title ?? draft.title
+          title: title || undefined
         },
         now
       );
@@ -204,6 +205,8 @@ export const handleTurn = async (input: TurnInput): Promise<TurnEvent[]> => {
       events.push({
         type: "booked",
         bookingId: result.value.id,
+        title: result.value.title,
+        slot,
         expression: "happy"
       });
       break;

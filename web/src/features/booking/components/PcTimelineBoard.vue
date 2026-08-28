@@ -115,12 +115,8 @@
               @mouseenter="showTip(ev, $event.currentTarget)"
               @mouseleave="tip = null"
             >
-              <template v-if="showHost">
-                <span class="tl-event-time">{{ ev.start }}-{{ ev.end }}</span>
-                <span class="tl-event-title">{{
-                  ev.mine ? `${ev.title} · 我` : `${ev.title} · ${ev.host}`
-                }}</span>
-              </template>
+              <span class="tl-event-title">{{ ev.title }}</span>
+              <span v-if="showHost" class="tl-event-time">{{ ev.start }}-{{ ev.end }}</span>
             </div>
 
             <div

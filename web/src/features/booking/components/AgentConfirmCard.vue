@@ -7,7 +7,7 @@
         v-model="title"
         type="text"
         maxlength="50"
-        placeholder="无主题会议"
+        :placeholder="titlePlaceholder"
         aria-label="会议主题"
       />
     </label>
@@ -42,6 +42,8 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
+import { defaultBookingTitle } from "../defaultTitle";
+import { getUserName } from "@/utils";
 
 const props = defineProps({
   draft: { type: Object, required: true }
@@ -49,6 +51,7 @@ const props = defineProps({
 
 const emit = defineEmits(["confirm", "cancel"]);
 
+const titlePlaceholder = defaultBookingTitle(getUserName());
 const title = ref(props.draft?.title || "");
 const slot = computed(() => props.draft?.slot || {});
 

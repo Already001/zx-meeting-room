@@ -184,10 +184,21 @@ const mineStatus = (
   return "upcoming";
 };
 
-const normalizeTitle = (raw: string | undefined): DomainResult<string> => {
+const TITLE_MAX = 50;
+const TITLE_SUFFIX = "预定的会议";
+
+/** 空主题时的默认标题：张三预定的会议 */
+export const defaultBookingTitle = (userName?: string): string => {
+  const name = String(userName ?? "").trim() || "同事";
+  const maxName = TITLE_MAX - TITLE_SUFFIX.length;
+  const clipped = name.length > maxName ? name.slice(0, maxName) : name;
+  return `${clipped}${TITLE_SUFFIX}`;
+};
+
+const normalizeTitle = (raw: string | undefined, userName?: string): DomainResult<string> => {
   let title = String(raw ?? "").trim();
-  if (!title) title = "无主题会议";
-  if (title.length > 50) return { ok: false, code: "M4000", msg: "主题不超过 50 个字" };
+  if (!title) title = defaultBookingTitle(userName);
+  if (title.length > TITLE_MAX) return { ok: false, code: "M4000", msg: "主题不超过 50 个字" };
   return { ok: true, value: title };
 };
 
@@ -204,7 +215,8 @@ type SlotOk = { date: string; startMin: number; endMin: number; title: string; r
 const validateSlot = (
   room: RoomRow,
   payload: { date: string; start: string; end: string; title?: string; remark?: string | null },
-  now: ShanghaiNow
+  now: ShanghaiNow,
+  userName?: string
 ): DomainResult<SlotOk> => {
   const date = String(payload.date || "").trim();
   if (!isDate(date)) return { ok: false, code: "M4000", msg: "请选择日期" };
@@ -233,7 +245,7 @@ const validateSlot = (
     return { ok: false, code: "M4000", msg: "剩余空闲不足 30 分钟" };
   }
 
-  const title = normalizeTitle(payload.title);
+  const title = normalizeTitle(payload.title, userName);
   if (!title.ok) return title;
   const remark = normalizeRemark(payload.remark);
   if (!remark.ok) return remark;
@@ -325,7 +337,7 @@ const insertBookingRow = (
   return db.prepare("SELECT * FROM bookings WHERE id=?").get(id) as BookingRow;
 };
 
-/** 空主题落成「无主题会议」；整段占用检查与插入同一事务 */
+/** 空主题落成「{姓名}预定的会议」；整段占用检查与插入同一事务 */
 export const createBooking = (
   db: Database.Database,
   corpId: string,
@@ -341,7 +353,7 @@ export const createBooking = (
     if (!room) return { ok: false, code: "M4004", msg: "会议室不存在" };
     if (!room.enabled) return { ok: false, code: "M4000", msg: "该会议室已停用" };
 
-    const first = validateSlot(room, payload, now);
+    const first = validateSlot(room, payload, now, user.userName);
     if (!first.ok) return first;
 
     const dates = payload.repeatWeekly
@@ -354,7 +366,7 @@ export const createBooking = (
 
     const slots: SlotOk[] = [];
     for (const date of dates) {
-      const slot = validateSlot(room, { ...payload, date }, now);
+      const slot = validateSlot(room, { ...payload, date }, now, user.userName);
       if (!slot.ok) return slot;
       if (findOverlap(db, payload.roomId, slot.value.date, slot.value.startMin, slot.value.endMin)) {
         return { ok: false, code: "M4010", msg: "该时段已被占用" };
@@ -527,7 +539,7 @@ export const updateBooking = (
     if (!room) return { ok: false, code: "M4004", msg: "会议室不存在" };
     if (!room.enabled) return { ok: false, code: "M4000", msg: "该会议室已停用" };
 
-    const slot = validateSlot(room, payload, now);
+    const slot = validateSlot(room, payload, now, user.userName);
     if (!slot.ok) return slot;
     if (
       findOverlap(

@@ -153,6 +153,9 @@ test("pick_slot then confirm writes one booking and title can be overridden", as
   assert.equal(bookingCount(db), 1);
   const booked = confirmed.find((e) => e.type === "booked");
   assert.ok(booked?.type === "booked");
+  assert.equal(booked.title, "评审会");
+  assert.equal(booked.slot.start, slot.start);
+  assert.equal(booked.expression, "happy");
 
   const row = db
     .prepare("SELECT title FROM bookings WHERE id=?")

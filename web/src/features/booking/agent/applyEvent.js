@@ -17,6 +17,7 @@
  *   | { type: 'suggest', reason: string, options: unknown[] }
  *   | { type: 'need_more', text: string }
  *   | { type: 'error', msg: string, code?: string }
+ *   | { type: 'booked', bookingId: string, title: string, slot: unknown }
  * )} AgentCard
  */
 
@@ -112,11 +113,16 @@ export function applyAgentEvent(state, event) {
     case "booked":
       return {
         ...state,
-        open: false,
+        open: true,
         status: "",
-        card: null,
         backCard: null,
-        expression: "happy"
+        expression: event.expression || "happy",
+        card: {
+          type: "booked",
+          bookingId: event.bookingId,
+          title: event.title || "预定的会议",
+          slot: event.slot ?? null
+        }
       };
 
     case "closed":
