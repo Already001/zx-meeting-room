@@ -4,7 +4,7 @@
     @pointermove="handlePointerMove"
     @pointerup="handlePointerUp"
     @pointercancel="handlePointerUp"
-    @scroll="closeRoomPop"
+    @scroll="onBoardScroll"
   >
     <div class="tl-board-inner">
       <div class="tl-row tl-head-row">
@@ -121,46 +121,13 @@
 
             <div
               v-if="selection && selection.roomId === room.id"
+              :ref="bindPickingEl"
               class="tl-picking"
               :style="{
                 left: TL.pct(selection.start),
                 width: TL.pct(selection.end - selection.start)
               }"
-            >
-              <div
-                v-if="selection.confirmed && !bookingOpen"
-                class="tl-confirm-card"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="tl-confirm-title"
-                @pointerdown.stop
-                @click.stop
-              >
-                <p id="tl-confirm-title" class="tl-confirm-text">
-                  {{ fromMinutes(selection.start) }}-{{
-                    fromMinutes(selection.end)
-                  }}
-                  {{ TL.duration(selection.start, selection.end) }}
-                </p>
-                <div class="tl-confirm-actions">
-                  <button
-                    type="button"
-                    class="tl-btn-ghost"
-                    @click="emit('update:selection', null)"
-                  >
-                    取消
-                  </button>
-                  <button
-                    ref="confirmBtn"
-                    type="button"
-                    class="tl-btn-primary"
-                    @click="emit('commit', confirmRoom, selection)"
-                  >
-                    确定
-                  </button>
-                </div>
-              </div>
-            </div>
+            />
           </div>
         </div>
 
@@ -175,6 +142,44 @@
         </div>
       </div>
     </div>
+
+    <Teleport
+      v-if="selection?.confirmed && !bookingOpen && confirmRoom"
+      to="body"
+    >
+      <div
+        ref="confirmCard"
+        class="tl-confirm-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tl-confirm-title"
+        :style="{ left: `${confirmPos.left}px`, top: `${confirmPos.top}px` }"
+        @pointerdown.stop
+        @click.stop
+      >
+        <p id="tl-confirm-title" class="tl-confirm-text">
+          {{ fromMinutes(selection.start) }}-{{ fromMinutes(selection.end) }}
+          {{ TL.duration(selection.start, selection.end) }}
+        </p>
+        <div class="tl-confirm-actions">
+          <button
+            type="button"
+            class="tl-btn-ghost"
+            @click="emit('update:selection', null)"
+          >
+            取消
+          </button>
+          <button
+            ref="confirmBtn"
+            type="button"
+            class="tl-btn-primary"
+            @click="emit('commit', confirmRoom, selection)"
+          >
+            确定
+          </button>
+        </div>
+      </div>
+    </Teleport>
 
     <Teleport v-if="tip" to="body">
       <div
@@ -210,6 +215,7 @@ import {
   watch
 } from "vue";
 import { fromMinutes, toMinutes, slotWindow, TL } from "../time";
+import { placeConfirmCard } from "../confirmPlace";
 import PcRoomPopover from "./PcRoomPopover.vue";
 import RoomPhoneIcon from "./RoomPhoneIcon.vue";
 import RoomScreenIcon from "./RoomScreenIcon.vue";
@@ -241,7 +247,14 @@ const dragRef = ref(null);
 const lastSelection = ref(null);
 const tip = ref(null);
 const confirmBtn = ref(null);
+const confirmCard = ref(null);
+const pickingEl = ref(null);
+const confirmPos = ref({ left: 0, top: 0 });
 const roomPop = ref(null);
+
+const bindPickingEl = (el) => {
+  pickingEl.value = el || null;
+};
 
 let timer = 0;
 
@@ -262,6 +275,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.clearInterval(timer);
   window.removeEventListener("keydown", onConfirmKey);
+  window.removeEventListener("resize", syncConfirmPos);
   document.removeEventListener("pointerdown", onDocPointerDown);
   document.removeEventListener("keydown", onRoomPopKey);
 });
@@ -287,6 +301,37 @@ const visibleHours = computed(() =>
 
 const closeRoomPop = () => {
   roomPop.value = null;
+};
+
+const FALLBACK_CARD = { width: 280, height: 96 };
+
+const syncConfirmPos = () => {
+  const el = pickingEl.value;
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const board = el.closest(".tl-board")?.getBoundingClientRect();
+  const cardEl = confirmCard.value;
+  confirmPos.value = placeConfirmCard({
+    row: {
+      left: rect.left,
+      width: rect.width,
+      top: rect.top,
+      bottom: rect.bottom
+    },
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      bottom: Math.min(window.innerHeight, board?.bottom ?? window.innerHeight)
+    },
+    card: cardEl
+      ? { width: cardEl.offsetWidth, height: cardEl.offsetHeight }
+      : FALLBACK_CARD
+  });
+};
+
+const onBoardScroll = () => {
+  closeRoomPop();
+  syncConfirmPos();
 };
 
 const toggleRoomPop = (room, el) => {
@@ -414,10 +459,26 @@ watch(
   () => Boolean(props.selection?.confirmed && !props.bookingOpen),
   async (open) => {
     window.removeEventListener("keydown", onConfirmKey);
+    window.removeEventListener("resize", syncConfirmPos);
     if (!open) return;
+    syncConfirmPos();
     window.addEventListener("keydown", onConfirmKey);
+    window.addEventListener("resize", syncConfirmPos);
     await nextTick();
+    syncConfirmPos();
     confirmBtn.value?.focus();
+  }
+);
+
+watch(
+  () =>
+    props.selection
+      ? `${props.selection.roomId}:${props.selection.start}:${props.selection.end}`
+      : "",
+  async () => {
+    if (!props.selection?.confirmed || props.bookingOpen) return;
+    await nextTick();
+    syncConfirmPos();
   }
 );
 </script>
