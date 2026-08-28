@@ -10,10 +10,16 @@
         </p>
       </div>
       <div class="zx-card !p-0 overflow-hidden">
-        <el-table v-loading="loading" :data="list" class="w-full booking-history-table">
+        <el-table
+          v-loading="loading"
+          :data="list"
+          class="w-full booking-history-table"
+        >
           <el-table-column prop="date" label="日期" width="120" />
           <el-table-column label="时段" width="130">
-            <template #default="{ row }">{{ row.start }} - {{ row.end }}</template>
+            <template #default="{ row }"
+              >{{ row.start }} - {{ row.end }}</template
+            >
           </el-table-column>
           <el-table-column prop="title" label="主题" min-width="140" />
           <el-table-column label="会议室" min-width="160">
@@ -23,11 +29,15 @@
           </el-table-column>
           <el-table-column prop="hostUserName" label="预定人" width="100" />
           <el-table-column label="状态" width="90">
-            <template #default="{ row }">{{ statusLabel(row.status) }}</template>
+            <template #default="{ row }">{{
+              statusLabel(row.status)
+            }}</template>
           </el-table-column>
           <el-table-column label="操作" width="90" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openAudit(row)">审计</el-button>
+              <el-button link type="primary" @click="openAudit(row)"
+                >审计</el-button
+              >
             </template>
           </el-table-column>
         </el-table>
@@ -51,7 +61,9 @@
           :timestamp="item.createdAt"
         >
           {{ actionLabel(item.action) }}
-          <span class="text-grayDark"> · {{ item.actorUserName || item.actorUserId }}</span>
+          <span class="text-grayDark">
+            · {{ item.actorUserName || item.actorUserId }}</span
+          >
         </el-timeline-item>
       </el-timeline>
       <p v-else class="text-13px text-grayDark">暂无审计记录</p>

@@ -177,6 +177,10 @@ const handleTapTrack = (room, e) => {
     emit("notice", "剩余空闲不足 30 分钟");
     return;
   }
-  emit("update:selection", { roomId: room.id, start: slot.start, end: slot.end });
+  emit("update:selection", {
+    roomId: room.id,
+    start: slot.start,
+    end: slot.end
+  });
 };
 </script>

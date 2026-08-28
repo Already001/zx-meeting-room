@@ -1,64 +1,114 @@
 <template>
   <div
     class="tl-board"
+    :class="{ 'is-week': isWeek }"
     @pointermove="handlePointerMove"
     @pointerup="handlePointerUp"
     @pointercancel="handlePointerUp"
     @scroll="onBoardScroll"
   >
     <div class="tl-board-inner">
-      <div class="tl-row tl-head-row">
+      <div class="tl-row tl-head-row" :class="{ 'is-week': isWeek }">
         <div class="tl-room-cell tl-head-cell">会议室</div>
         <div class="tl-track tl-axis">
-          <span
-            v-for="h in visibleHours"
-            :key="h"
-            class="tl-axis-label"
-            :class="{
-              'tl-axis-label-first': h === 0,
-              'tl-axis-label-last': h === 23
-            }"
-            :style="{ left: TL.pct(h * 60) }"
-          >
-            {{ String(h).padStart(2, "0") }}:00
-          </span>
-          <span
-            v-if="showNow"
-            class="tl-axis-now"
-            :style="{ left: TL.pct(nowMin) }"
-          >
-            {{ fromMinutes(nowMin) }}
-          </span>
-          <span
-            v-if="selection"
-            class="tl-axis-pick"
-            :style="{ left: TL.pct(selection.start) }"
-          >
-            {{ fromMinutes(selection.start) }}
-          </span>
-          <span
-            v-if="selection"
-            class="tl-axis-pick"
-            :style="{ left: TL.pct(selection.end) }"
-          >
-            {{ fromMinutes(selection.end) }}
-          </span>
+          <template v-if="isWeek">
+            <span
+              v-for="(d, i) in weekDates"
+              :key="d.value"
+              class="tl-axis-label tl-axis-label-week"
+              :style="{ left: WEEK.pct(i, TL.DAY_MIN / 2) }"
+            >
+              <span>{{ d.weekday }}</span>
+              <span class="tl-axis-date">{{ d.day }}</span>
+            </span>
+            <span
+              v-if="showNow"
+              class="tl-axis-now"
+              :style="{ left: weekNowLeft }"
+            >
+              {{ fromMinutes(nowMin) }}
+            </span>
+            <span
+              v-if="weekSelection"
+              class="tl-axis-pick"
+              :style="{
+                left: WEEK.pct(weekSelection.startDay, weekSelection.start)
+              }"
+            >
+              {{ fromMinutes(weekSelection.start) }}
+            </span>
+            <span
+              v-if="weekSelection"
+              class="tl-axis-pick"
+              :style="{
+                left: WEEK.pct(weekSelection.endDay, weekSelection.end)
+              }"
+            >
+              {{ fromMinutes(weekSelection.end) }}
+            </span>
+          </template>
+          <template v-else>
+            <span
+              v-for="h in visibleHours"
+              :key="h"
+              class="tl-axis-label"
+              :class="{
+                'tl-axis-label-first': h === 0,
+                'tl-axis-label-last': h === 23
+              }"
+              :style="{ left: TL.pct(h * 60) }"
+            >
+              {{ String(h).padStart(2, "0") }}:00
+            </span>
+            <span
+              v-if="showNow"
+              class="tl-axis-now"
+              :style="{ left: TL.pct(nowMin) }"
+            >
+              {{ fromMinutes(nowMin) }}
+            </span>
+            <span
+              v-if="selection"
+              class="tl-axis-pick"
+              :style="{ left: TL.pct(selection.start) }"
+            >
+              {{ fromMinutes(selection.start) }}
+            </span>
+            <span
+              v-if="selection"
+              class="tl-axis-pick"
+              :style="{ left: TL.pct(selection.end) }"
+            >
+              {{ fromMinutes(selection.end) }}
+            </span>
+          </template>
         </div>
       </div>
 
       <div class="tl-body">
-        <div
-          v-if="showNow || selection"
-          class="tl-guides"
-        >
+        <div v-if="showNow || selection" class="tl-guides">
           <div class="tl-room-cell tl-guides-spacer" />
           <div class="tl-track">
             <span
               v-if="showNow"
               class="tl-line-now"
-              :style="{ left: TL.pct(nowMin) }"
+              :style="{ left: isWeek ? weekNowLeft : TL.pct(nowMin) }"
             />
-            <template v-if="selection">
+            <template v-if="weekSelection">
+              <span
+                class="tl-line-pick"
+                :style="{
+                  left: WEEK.pct(weekSelection.startDay, weekSelection.start)
+                }"
+              />
+              <span
+                class="tl-line-pick"
+                :style="{
+                  left: WEEK.pct(weekSelection.endDay, weekSelection.end)
+                }"
+              />
+            </template>
+            <template v-else-if="selection">
               <span
                 class="tl-line-pick"
                 :style="{ left: TL.pct(selection.start) }"
@@ -99,35 +149,56 @@
 
           <div class="tl-track" @pointerdown="handlePointerDown(room, $event)">
             <span
-              v-if="isToday && nowMin > 0"
+              v-if="pastWidth"
               class="tl-past"
-              :style="{ width: TL.pct(nowMin) }"
+              :style="{ width: pastWidth }"
             />
             <div
-              v-for="ev in room.busyEvents || []"
-              :key="`${room.id}-${ev.start}-${ev.end}-${ev.title}`"
+              v-for="ev in roomEvents(room)"
+              :key="ev.key"
               class="tl-event"
               :class="{ mine: ev.mine }"
-              :style="{
-                left: TL.pct(toMinutes(ev.start)),
-                width: TL.pct(toMinutes(ev.end) - toMinutes(ev.start))
-              }"
+              :style="ev.style"
               @mouseenter="showTip(ev, $event.currentTarget)"
               @mouseleave="tip = null"
             >
               <span class="tl-event-title">{{ ev.title }}</span>
-              <span v-if="showHost" class="tl-event-time">{{ ev.start }}-{{ ev.end }}</span>
             </div>
 
+            <template
+              v-if="
+                selection &&
+                selection.roomId === room.id &&
+                selection.view === 'week'
+              "
+            >
+              <div
+                v-for="dayIndex in weekPickingDays"
+                :key="`${room.id}-pick-${dayIndex}`"
+                :ref="
+                  dayIndex === selection.startDay ? bindPickingEl : undefined
+                "
+                class="tl-picking"
+                :style="
+                  WEEK.eventStyle(dayIndex, selection.start, selection.end)
+                "
+              >
+                <span
+                  v-if="dayIndex === selection.startDay"
+                  class="tl-picking-label"
+                >
+                  {{ pickingLabel }}
+                </span>
+              </div>
+            </template>
             <div
-              v-if="selection && selection.roomId === room.id"
+              v-else-if="selection && selection.roomId === room.id"
               :ref="bindPickingEl"
               class="tl-picking"
-              :style="{
-                left: TL.pct(selection.start),
-                width: TL.pct(selection.end - selection.start)
-              }"
-            />
+              :style="pickingStyle"
+            >
+              <span class="tl-picking-label">{{ pickingLabel }}</span>
+            </div>
           </div>
         </div>
 
@@ -158,8 +229,7 @@
         @click.stop
       >
         <p id="tl-confirm-title" class="tl-confirm-text">
-          {{ fromMinutes(selection.start) }}-{{ fromMinutes(selection.end) }}
-          {{ TL.duration(selection.start, selection.end) }}
+          {{ confirmText }}
         </p>
         <div class="tl-confirm-actions">
           <button
@@ -214,7 +284,16 @@ import {
   ref,
   watch
 } from "vue";
-import { fromMinutes, toMinutes, slotWindow, TL } from "../time";
+import {
+  fromMinutes,
+  slotWindow,
+  TL,
+  toMinutes,
+  WEEK,
+  weekDaySlotWindow,
+  weekExpandDays,
+  weekRangeLabel
+} from "../time";
 import { placeConfirmCard } from "../confirmPlace";
 import PcRoomPopover from "./PcRoomPopover.vue";
 import RoomPhoneIcon from "./RoomPhoneIcon.vue";
@@ -223,9 +302,11 @@ import RoomScreenIcon from "./RoomScreenIcon.vue";
 const props = defineProps({
   rooms: { type: Array, default: () => [] },
   selection: { type: Object, default: null },
-  showHost: { type: Boolean, default: false },
   isToday: { type: Boolean, default: false },
-  bookingOpen: { type: Boolean, default: false }
+  bookingOpen: { type: Boolean, default: false },
+  viewMode: { type: String, default: "day" },
+  weekDates: { type: Array, default: () => [] },
+  todayIso: { type: String, default: "" }
 });
 
 const emit = defineEmits(["update:selection", "commit", "notice"]);
@@ -280,20 +361,110 @@ onBeforeUnmount(() => {
   document.removeEventListener("keydown", onRoomPopKey);
 });
 
+const isWeek = computed(() => props.viewMode === "week");
+
+const weekSelection = computed(() =>
+  props.selection?.view === "week" ? props.selection : null
+);
+
+const todayWeekIndex = computed(() => {
+  if (!props.todayIso) return -1;
+  return props.weekDates.findIndex((d) => d.value === props.todayIso);
+});
+
+const weekNowLeft = computed(() => {
+  const i = todayWeekIndex.value;
+  if (i < 0) return WEEK.pct(0);
+  return WEEK.pct(i, nowMin.value);
+});
+
+const showNow = computed(() => {
+  if (nowMin.value <= 0 || nowMin.value >= TL.DAY_MIN) return false;
+  if (isWeek.value) return todayWeekIndex.value >= 0;
+  return props.isToday;
+});
+
+const pastWidth = computed(() => {
+  if (isWeek.value) {
+    const i = todayWeekIndex.value;
+    if (i < 0) {
+      const last = props.weekDates[props.weekDates.length - 1];
+      if (last && props.todayIso && last.value < props.todayIso) return "100%";
+      return "";
+    }
+    return WEEK.pct(i, nowMin.value);
+  }
+  if (props.isToday && nowMin.value > 0) return TL.pct(nowMin.value);
+  return "";
+});
+
+const pickingStyle = computed(() => {
+  const sel = props.selection;
+  if (!sel) return {};
+  return {
+    left: TL.pct(sel.start),
+    width: TL.pct(sel.end - sel.start)
+  };
+});
+
+const weekPickingDays = computed(() => {
+  const sel = weekSelection.value;
+  if (!sel) return [];
+  const days = [];
+  for (let i = sel.startDay; i <= sel.endDay; i += 1) days.push(i);
+  return days;
+});
+
+const pickingLabel = computed(() => {
+  const sel = props.selection;
+  if (!sel) return "";
+  if (sel.view === "week") {
+    return weekRangeLabel(sel.startDay, sel.endDay, sel.start, sel.end);
+  }
+  return `${fromMinutes(sel.start)}-${fromMinutes(sel.end)}`;
+});
+
+const confirmText = computed(() => {
+  const sel = props.selection;
+  if (!sel) return "";
+  if (sel.view === "week") {
+    const days = sel.endDay - sel.startDay + 1;
+    const slot = `${weekRangeLabel(sel.startDay, sel.endDay, sel.start, sel.end)} ${TL.duration(sel.start, sel.end)}`;
+    return days > 1 ? `${slot} · ${days} 天` : slot;
+  }
+  return `${fromMinutes(sel.start)}-${fromMinutes(sel.end)} ${TL.duration(sel.start, sel.end)}`;
+});
+
+const roomEvents = (room) => {
+  if (isWeek.value) {
+    return (room.weekDays || []).flatMap((day, i) =>
+      (day.busyEvents || []).map((ev) => ({
+        ...ev,
+        key: `${room.id}-${day.date}-${ev.start}-${ev.end}-${ev.title}`,
+        style: WEEK.eventStyle(i, toMinutes(ev.start), toMinutes(ev.end))
+      }))
+    );
+  }
+  return (room.busyEvents || []).map((ev) => ({
+    ...ev,
+    key: `${room.id}-${ev.start}-${ev.end}-${ev.title}`,
+    style: {
+      left: TL.pct(toMinutes(ev.start)),
+      width: TL.pct(toMinutes(ev.end) - toMinutes(ev.start))
+    }
+  }));
+};
+
 const axisHourHidden = (hourMin) => {
   const near = (a, b, windowMin) => Math.abs(a - b) < windowMin;
   if (props.isToday && near(hourMin, nowMin.value, 40)) return true;
   const sel = props.selection;
-  if (!sel) return false;
+  if (!sel || sel.view === "week") return false;
   if (near(hourMin, sel.start, 40)) return true;
   if (near(hourMin, sel.end, 40)) return true;
   const mid = (sel.start + sel.end) / 2;
   return near(hourMin, mid, 48);
 };
-
-const showNow = computed(
-  () => props.isToday && nowMin.value > 0 && nowMin.value < TL.DAY_MIN
-);
 
 const visibleHours = computed(() =>
   TL.HOURS.filter((h) => !axisHourHidden(h * 60))
@@ -380,6 +551,63 @@ const handlePointerDown = (room, e) => {
 
   const track = e.currentTarget;
   const rect = track.getBoundingClientRect();
+
+  if (isWeek.value) {
+    const { dayIndex, minute } = WEEK.pointAt(rect, e.clientX);
+    const day = room.weekDays?.[dayIndex];
+    const opts = { todayIso: props.todayIso, nowMin: nowMin.value };
+    if (
+      day &&
+      props.todayIso &&
+      day.date === props.todayIso &&
+      minute < nowMin.value
+    ) {
+      emit("notice", "该时段已过期");
+      return;
+    }
+    if (day && TL.eventAt({ busyEvents: day.busyEvents || [] }, minute)) {
+      emit("notice", "该时段已被占用，请选择空闲区域");
+      return;
+    }
+    const [low, high] = weekDaySlotWindow(room, dayIndex, minute, opts);
+    if (high - low < TL.SNAP) {
+      emit("notice", "剩余空闲不足 30 分钟");
+      return;
+    }
+    const start = Math.max(low, minute);
+    if (start >= high || high - start < TL.SNAP) {
+      emit("notice", "剩余空闲不足 30 分钟");
+      return;
+    }
+    dragRef.value = {
+      view: "week",
+      room,
+      rect,
+      anchorDay: dayIndex,
+      anchorMin: start,
+      low,
+      high,
+      opts
+    };
+    lastSelection.value = {
+      view: "week",
+      roomId: room.id,
+      startDay: dayIndex,
+      endDay: dayIndex,
+      start,
+      end: Math.min(high, start + TL.SNAP),
+      dates: day ? [day.date] : [],
+      confirmed: false
+    };
+    emit("update:selection", lastSelection.value);
+    try {
+      track.setPointerCapture(e.pointerId);
+    } catch {
+      // 无真实 pointer 时仍保留选中态
+    }
+    return;
+  }
+
   const anchor = TL.minuteAt(rect, e.clientX);
   if (props.isToday && anchor < nowMin.value) {
     emit("notice", "该时段已过期");
@@ -421,6 +649,38 @@ const handlePointerDown = (room, e) => {
 const handlePointerMove = (e) => {
   const drag = dragRef.value;
   if (!drag) return;
+  if (drag.view === "week") {
+    const point = WEEK.pointAt(drag.rect, e.clientX);
+    let start = Math.min(drag.anchorMin, point.minute);
+    let end = Math.max(drag.anchorMin, point.minute);
+    if (end === start) end = start + TL.SNAP;
+    start = Math.max(drag.low, start);
+    end = Math.min(drag.high, end);
+    if (end - start < TL.SNAP) return;
+    const [startDay, endDay] = weekExpandDays(
+      drag.room,
+      drag.anchorDay,
+      point.dayIndex,
+      start,
+      end,
+      drag.opts
+    );
+    if (endDay < startDay) return;
+    lastSelection.value = {
+      view: "week",
+      roomId: drag.room.id,
+      startDay,
+      endDay,
+      start,
+      end,
+      dates: (drag.room.weekDays || [])
+        .slice(startDay, endDay + 1)
+        .map((d) => d.date),
+      confirmed: false
+    };
+    emit("update:selection", lastSelection.value);
+    return;
+  }
   const minute = TL.minuteAt(drag.rect, e.clientX);
   let start = Math.min(drag.anchor, minute);
   let end = Math.max(drag.anchor, minute);
@@ -473,7 +733,7 @@ watch(
 watch(
   () =>
     props.selection
-      ? `${props.selection.roomId}:${props.selection.start}:${props.selection.end}`
+      ? `${props.selection.roomId}:${props.selection.view || "day"}:${props.selection.start}:${props.selection.end}:${props.selection.startDay ?? ""}:${props.selection.endDay ?? ""}`
       : "",
   async () => {
     if (!props.selection?.confirmed || props.bookingOpen) return;

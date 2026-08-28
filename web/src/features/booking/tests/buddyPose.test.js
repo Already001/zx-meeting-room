@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { easeInOutCubic, lerpPose, morphSquash, poseFor } from "../agent/buddyPose.js";
+import {
+  easeInOutCubic,
+  lerpPose,
+  morphSquash,
+  poseFor
+} from "../agent/buddyPose.js";
 
 test("poseFor happy is a squint, puzzled only shuts the left eye", () => {
   const happy = poseFor("happy");

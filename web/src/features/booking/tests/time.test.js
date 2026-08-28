@@ -7,11 +7,18 @@ import {
   clipOpen,
   extendSlotEnd,
   fromMinutes,
+  mergeWeekBoards,
+  mondayOf,
   pickTapSlot,
   shanghaiToday,
   slotWindow,
   TL,
-  toMinutes
+  toMinutes,
+  WEEK,
+  weekDayHasSlot,
+  weekExpandDays,
+  weekRangeLabel,
+  workweekOf
 } from "../time.js";
 
 test("toMinutes / fromMinutes round-trip including 24:00", () => {
@@ -131,4 +138,81 @@ test("TL.duration formats hours and minutes", () => {
   assert.equal(TL.duration(600, 660), "1小时");
   assert.equal(TL.duration(600, 630), "30 分钟");
   assert.equal(TL.duration(600, 690), "1小时 30 分钟");
+});
+
+test("workweekOf is Monday through Friday of the containing week", () => {
+  assert.equal(mondayOf("2026-08-26"), "2026-08-24");
+  assert.deepEqual(workweekOf("2026-08-26"), [
+    "2026-08-24",
+    "2026-08-25",
+    "2026-08-26",
+    "2026-08-27",
+    "2026-08-28"
+  ]);
+  assert.equal(mondayOf("2026-08-30"), "2026-08-24");
+  assert.equal(
+    weekRangeLabel(0, 4, 10 * 60, 12 * 60),
+    "周一至周五 10:00-12:00"
+  );
+  assert.equal(weekRangeLabel(2, 2, 9 * 60, 18 * 60), "周三 09:00-18:00");
+});
+
+test("WEEK.pointAt maps x to a workday and minute within the column", () => {
+  const rect = { left: 0, width: 500 };
+  assert.equal(WEEK.dayAt(rect, 0), 0);
+  assert.equal(WEEK.dayAt(rect, 99), 0);
+  assert.equal(WEEK.dayAt(rect, 100), 1);
+  assert.equal(WEEK.dayAt(rect, 499), 4);
+  assert.equal(WEEK.pointAt(rect, 50).minute, 12 * 60);
+  assert.equal(WEEK.width(0, 4), "100%");
+  assert.equal(WEEK.pct(0), "0%");
+});
+
+test("weekExpandDays keeps a time slot only on contiguous free workdays", () => {
+  const room = {
+    openStart: "09:00",
+    openEnd: "18:00",
+    weekDays: [
+      { date: "2026-08-24", busyEvents: [] },
+      { date: "2026-08-25", busyEvents: [] },
+      { date: "2026-08-26", busyEvents: [{ start: "10:00", end: "11:00" }] },
+      { date: "2026-08-27", busyEvents: [] },
+      { date: "2026-08-28", busyEvents: [] }
+    ]
+  };
+  const opts = { todayIso: "2026-08-24", nowMin: 8 * 60 };
+  assert.equal(weekDayHasSlot(room, 0, 10 * 60, 12 * 60, opts), true);
+  assert.equal(weekDayHasSlot(room, 2, 10 * 60, 12 * 60, opts), false);
+  assert.equal(weekDayHasSlot(room, 2, 14 * 60, 16 * 60, opts), true);
+  assert.deepEqual(weekExpandDays(room, 0, 4, 10 * 60, 12 * 60, opts), [0, 1]);
+  assert.deepEqual(weekExpandDays(room, 3, 4, 10 * 60, 12 * 60, opts), [3, 4]);
+  assert.deepEqual(weekExpandDays(room, 0, 4, 14 * 60, 16 * 60, opts), [0, 4]);
+});
+
+test("mergeWeekBoards overlays busyEvents by date onto each room", () => {
+  const dates = ["2026-08-24", "2026-08-25"];
+  const merged = mergeWeekBoards(dates, [
+    {
+      facilityOptions: ["电视"],
+      rooms: [
+        {
+          id: "r1",
+          name: "1号",
+          busyEvents: [{ start: "09:00", end: "10:00" }]
+        }
+      ]
+    },
+    {
+      rooms: [
+        {
+          id: "r1",
+          name: "1号",
+          busyEvents: [{ start: "14:00", end: "15:00" }]
+        }
+      ]
+    }
+  ]);
+  assert.equal(merged.facilityOptions[0], "电视");
+  assert.equal(merged.rooms[0].weekDays[0].busyEvents[0].start, "09:00");
+  assert.equal(merged.rooms[0].weekDays[1].busyEvents[0].start, "14:00");
 });

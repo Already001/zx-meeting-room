@@ -1,7 +1,14 @@
 import { computed, ref, watch } from "vue";
 import { CAPACITY_OPTIONS } from "./constants";
 import { roomMatchesFilters, roomPlace } from "./filters";
-import { addDays, shanghaiToday } from "./time";
+import {
+  addDays,
+  formatMonthDay,
+  mergeWeekBoards,
+  shanghaiToday,
+  weekdayIndex,
+  workweekOf
+} from "./time";
 import { getBoard } from "@/server/module/booking";
 import { showToastError } from "@/utils";
 
@@ -15,10 +22,7 @@ const toastError = (error) => {
   showToastError(msg || "加载失败");
 };
 
-const weekdayOf = (iso) => {
-  const [y, m, d] = iso.split("-").map(Number);
-  return WEEK_LABELS[new Date(y, m - 1, d).getDay()];
-};
+const weekdayOf = (iso) => WEEK_LABELS[weekdayIndex(iso)];
 
 const buildDays = (baseIso, count) =>
   Array.from({ length: count }, (_, i) => {
@@ -43,7 +47,23 @@ const buildDays = (baseIso, count) =>
 export const useBoard = () => {
   const today = shanghaiToday();
   const boardDate = ref(today);
+  const viewMode = ref("day");
   const days = computed(() => buildDays(today, 14));
+  const workweekDates = computed(() => workweekOf(boardDate.value));
+  const weekDaysMeta = computed(() =>
+    workweekDates.value.map((value) => {
+      const [, mm, dd] = value.split("-");
+      return {
+        value,
+        weekday: weekdayOf(value),
+        day: `${Number(mm)}/${Number(dd)}`
+      };
+    })
+  );
+  const weekLabel = computed(() => {
+    const week = workweekDates.value;
+    return `${formatMonthDay(week[0])} – ${formatMonthDay(week[4])}`;
+  });
   const filters = ref({ place: "all", capacity: "all", facilities: [] });
   const keyword = ref("");
   const selection = ref(null);
@@ -68,12 +88,21 @@ export const useBoard = () => {
     const seq = ++loadSeq;
     loading.value = true;
     try {
-      const data = await getBoard(boardDate.value);
-      if (seq !== loadSeq) return;
-      rooms.value = Array.isArray(data?.rooms) ? data.rooms : [];
-      facilityOptions.value = Array.isArray(data?.facilityOptions)
-        ? data.facilityOptions
-        : [];
+      if (viewMode.value === "week") {
+        const dates = workweekDates.value;
+        const boards = await Promise.all(dates.map((date) => getBoard(date)));
+        if (seq !== loadSeq) return;
+        const merged = mergeWeekBoards(dates, boards);
+        rooms.value = merged.rooms;
+        facilityOptions.value = merged.facilityOptions;
+      } else {
+        const data = await getBoard(boardDate.value);
+        if (seq !== loadSeq) return;
+        rooms.value = Array.isArray(data?.rooms) ? data.rooms : [];
+        facilityOptions.value = Array.isArray(data?.facilityOptions)
+          ? data.facilityOptions
+          : [];
+      }
     } catch (error) {
       if (seq !== loadSeq) return;
       rooms.value = [];
@@ -84,13 +113,7 @@ export const useBoard = () => {
     }
   };
 
-  watch(
-    boardDate,
-    () => {
-      reload();
-    },
-    { immediate: true }
-  );
+  watch([boardDate, viewMode], reload, { immediate: true });
 
   watch(visibleRooms, (list) => {
     if (!selection.value) return;
@@ -102,7 +125,11 @@ export const useBoard = () => {
   return {
     CAPACITY_OPTIONS,
     boardDate,
+    viewMode,
     days,
+    workweekDates,
+    weekDaysMeta,
+    weekLabel,
     filters,
     keyword,
     selection,

@@ -39,6 +39,128 @@ export const addDays = (date, days) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+export const WORKWEEK_LABELS = ["周一", "周二", "周三", "周四", "周五"];
+const WORKWEEK_DAYS = 5;
+
+/** 日历日星期：0 周日 … 6 周六（按公历日期，不随本机时区） */
+export const weekdayIndex = (iso) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+};
+
+/** 该日所在工作周（周一） */
+export const mondayOf = (iso) => {
+  const dow = weekdayIndex(iso);
+  const offset = dow === 0 ? -6 : 1 - dow;
+  return addDays(iso, offset);
+};
+
+/** 周一至周五，5 个 YYYY-MM-DD */
+export const workweekOf = (iso) => {
+  const monday = mondayOf(iso);
+  return Array.from({ length: WORKWEEK_DAYS }, (_, i) => addDays(monday, i));
+};
+
+export const formatMonthDay = (iso) => {
+  const [, mm, dd] = iso.split("-");
+  return `${Number(mm)}月${Number(dd)}日`;
+};
+
+export const weekRangeLabel = (startDay, endDay, startMin, endMin) => {
+  const days =
+    startDay === endDay
+      ? WORKWEEK_LABELS[startDay]
+      : `${WORKWEEK_LABELS[startDay]}至${WORKWEEK_LABELS[endDay]}`;
+  if (startMin == null || endMin == null) return days;
+  return `${days} ${fromMinutes(startMin)}-${fromMinutes(endMin)}`;
+};
+
+export const WEEK = {
+  DAYS: WORKWEEK_DAYS,
+
+  pct: (dayIndex, minute = 0) =>
+    `${((dayIndex + minute / DAY_MIN) / WORKWEEK_DAYS) * 100}%`,
+
+  width: (startDay, endDayInclusive) =>
+    `${((endDayInclusive - startDay + 1) / WORKWEEK_DAYS) * 100}%`,
+
+  pointAt: (rect, clientX) => {
+    const ratio = Math.max(
+      0,
+      Math.min(0.9999, (clientX - rect.left) / rect.width)
+    );
+    const pos = ratio * WORKWEEK_DAYS;
+    const dayIndex = Math.min(WORKWEEK_DAYS - 1, Math.floor(pos));
+    const raw = (pos - dayIndex) * DAY_MIN;
+    const minute = TL.snap(Math.min(DAY_MIN - SNAP_MIN, Math.max(0, raw)));
+    return { dayIndex, minute };
+  },
+
+  dayAt: (rect, clientX) => WEEK.pointAt(rect, clientX).dayIndex,
+
+  eventStyle: (dayIndex, start, end) => ({
+    left: WEEK.pct(dayIndex, start),
+    width: `${((end - start) / DAY_MIN / WORKWEEK_DAYS) * 100}%`
+  })
+};
+
+/** 某工作日在锚点分钟处的空闲窗口，与日视图 slotWindow 相同规则 */
+export const weekDaySlotWindow = (room, dayIndex, minute, opts = {}) => {
+  const day = (room.weekDays || [])[dayIndex];
+  if (!day) return [0, -1];
+  if (opts.todayIso && day.date < opts.todayIso) return [0, -1];
+  return slotWindow({ ...room, busyEvents: day.busyEvents || [] }, minute, {
+    isToday: Boolean(opts.todayIso && day.date === opts.todayIso),
+    nowMin: opts.nowMin || 0
+  });
+};
+
+export const weekDayHasSlot = (room, dayIndex, start, end, opts = {}) => {
+  const [low, high] = weekDaySlotWindow(room, dayIndex, start, opts);
+  return start >= low && end <= high && end - start >= SNAP_MIN;
+};
+
+/** 从锚点日向目标日扩展，只保留该时段都空闲的连续工作日 */
+export const weekExpandDays = (
+  room,
+  anchorDay,
+  targetDay,
+  start,
+  end,
+  opts = {}
+) => {
+  if (!weekDayHasSlot(room, anchorDay, start, end, opts)) {
+    return [anchorDay, anchorDay - 1];
+  }
+  const lo = Math.min(anchorDay, targetDay);
+  const hi = Math.max(anchorDay, targetDay);
+  let low = anchorDay;
+  let high = anchorDay;
+  while (low > lo && weekDayHasSlot(room, low - 1, start, end, opts)) low -= 1;
+  while (high < hi && weekDayHasSlot(room, high + 1, start, end, opts)) {
+    high += 1;
+  }
+  return [low, high];
+};
+
+export const mergeWeekBoards = (dates, boards) => {
+  const base = boards[0];
+  if (!base) return { rooms: [], facilityOptions: [] };
+  const rooms = (base.rooms || []).map((room) => ({
+    ...room,
+    weekDays: dates.map((date, i) => {
+      const match = (boards[i]?.rooms || []).find((r) => r.id === room.id);
+      return { date, busyEvents: match?.busyEvents || [] };
+    })
+  }));
+  return {
+    rooms,
+    facilityOptions: Array.isArray(base.facilityOptions)
+      ? base.facilityOptions
+      : []
+  };
+};
+
 /** 把可选区间裁到房间开放时间 [openStart, openEnd] */
 export const clipOpen = (low, high, openStart, openEnd) => [
   Math.max(low, toMinutes(openStart)),
@@ -140,7 +262,13 @@ export const slotWindow = (
 export const pickTapSlot = (
   room,
   minute,
-  { isToday = false, nowMin = 0, duration = 60, listStart = 0, listEnd = DAY_MIN } = {}
+  {
+    isToday = false,
+    nowMin = 0,
+    duration = 60,
+    listStart = 0,
+    listEnd = DAY_MIN
+  } = {}
 ) => {
   const [low, high] = slotWindow(room, minute, {
     isToday,

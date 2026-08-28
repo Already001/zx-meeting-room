@@ -7,7 +7,9 @@
       @click="open = !open"
     >
       日志
-      <span v-if="entries.length" class="agent-debug-chip-n">{{ entries.length }}</span>
+      <span v-if="entries.length" class="agent-debug-chip-n">{{
+        entries.length
+      }}</span>
     </button>
 
     <aside
@@ -22,7 +24,11 @@
           <h2 class="agent-debug-title">模型日志</h2>
         </div>
         <div class="agent-debug-head-actions">
-          <button type="button" class="agent-debug-ghost" @click="emit('clear')">
+          <button
+            type="button"
+            class="agent-debug-ghost"
+            @click="emit('clear')"
+          >
             清空
           </button>
           <button
@@ -62,7 +68,9 @@
             <div class="agent-debug-meta">
               <div class="agent-debug-tags">
                 <span class="agent-debug-cat">{{ catLabel(row.cat) }}</span>
-                <span v-if="row.round" class="agent-debug-round">{{ formatRound(row.round) }}</span>
+                <span v-if="row.round" class="agent-debug-round">{{
+                  formatRound(row.round)
+                }}</span>
               </div>
               <time>{{ formatTime(row.ts) }}</time>
             </div>
@@ -71,7 +79,9 @@
           </div>
         </li>
       </ol>
-      <p v-else class="agent-debug-empty">还没有日志。对黑球说一句话后会出现请求、工具参数和空档结果。</p>
+      <p v-else class="agent-debug-empty">
+        还没有日志。对黑球说一句话后会出现请求、工具参数和空档结果。
+      </p>
     </aside>
   </Teleport>
 </template>

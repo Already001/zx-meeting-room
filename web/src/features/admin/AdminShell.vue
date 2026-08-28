@@ -93,9 +93,20 @@
     </aside>
     <div class="flex-1 min-w-0 min-h-0 flex flex-col">
       <header
-        class="h-48px shrink-0 bg-canvas border-b border-edge flex items-center px-20px text-16px font-500 leading-24px text-black whitespace-nowrap overflow-hidden text-ellipsis text-pretty"
+        class="h-48px shrink-0 bg-canvas border-b border-edge flex items-center justify-between gap-12px px-20px"
       >
-        智信 · 智能会议室管理平台
+        <span
+          class="text-16px font-500 leading-24px text-black whitespace-nowrap overflow-hidden text-ellipsis text-pretty"
+        >
+          智信 · 智能会议室管理平台
+        </span>
+        <button
+          type="button"
+          class="shrink-0 border-none bg-transparent text-14px leading-20px text-primary cursor-pointer px-0"
+          @click="switchDemoUser"
+        >
+          切换用户
+        </button>
       </header>
       <main id="admin-main" class="flex-1 min-h-0 overflow-auto" tabindex="-1">
         <div class="p-20px bg-grayLight min-h-full">
@@ -107,6 +118,8 @@
 </template>
 
 <script setup>
+import { switchDemoUser } from "@/features/demo/session";
+
 defineProps({
   active: {
     type: String,

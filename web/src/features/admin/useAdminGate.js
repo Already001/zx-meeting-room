@@ -14,6 +14,7 @@ export const useAdminGate = () => {
       showToastError("缺少企业信息，请重新登录");
       ready.value = true;
       isAdmin.value = false;
+      router.replace("/");
       return;
     }
     try {

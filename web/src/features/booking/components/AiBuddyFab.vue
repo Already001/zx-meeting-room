@@ -22,13 +22,7 @@
         aria-hidden="true"
       >
         <defs>
-          <filter
-            :id="glowId"
-            x="-30%"
-            y="-30%"
-            width="160%"
-            height="160%"
-          >
+          <filter :id="glowId" x="-30%" y="-30%" width="160%" height="160%">
             <feDropShadow
               dx="0"
               dy="3"
@@ -69,6 +63,31 @@
         </g>
       </svg>
     </button>
+
+    <div
+      v-if="showPrompts"
+      class="ai-buddy-idle-prompts"
+      :class="{ 'is-lifted': lifted }"
+      role="group"
+      aria-label="快捷会议建议"
+    >
+      <button
+        v-for="suggestion in suggestions"
+        :key="suggestion.id"
+        type="button"
+        class="ai-buddy-prompt"
+        :class="{ 'is-history': suggestion.source === 'history' }"
+        :disabled="sending"
+        :aria-label="
+          suggestion.source === 'history'
+            ? `根据历史预订推荐：${suggestion.label}`
+            : suggestion.label
+        "
+        @click="sendSuggestion(suggestion)"
+      >
+        {{ suggestion.label }}
+      </button>
+    </div>
 
     <div
       v-if="dockOpen"
@@ -150,42 +169,22 @@
         </div>
       </div>
 
-      <div
-        v-if="!ui.card && !ui.status && suggestions.length"
-        class="ai-buddy-prompts"
-        aria-label="快捷会议建议"
-      >
-        <button
-          v-for="suggestion in suggestions"
-          :key="suggestion.id"
-          type="button"
-          class="ai-buddy-prompt"
-          :disabled="sending"
-          :aria-label="
-            suggestion.source === 'history'
-              ? `根据历史预订推荐：${suggestion.label}`
-              : suggestion.label
-          "
-          @click="sendSuggestion(suggestion)"
-        >
-          {{ suggestion.label }}
-        </button>
+      <div class="ai-buddy-panel">
+        <form class="ai-buddy-composer" @submit.prevent="sendMessage">
+          <input
+            ref="inputRef"
+            v-model="draftText"
+            type="text"
+            maxlength="200"
+            placeholder="告诉我时间和人数，帮你找会议室"
+            :disabled="sending"
+            aria-label="对助手说"
+          />
+          <button type="submit" class="ai-buddy-send" :disabled="sending">
+            发送
+          </button>
+        </form>
       </div>
-
-      <form class="ai-buddy-composer" @submit.prevent="sendMessage">
-        <input
-          ref="inputRef"
-          v-model="draftText"
-          type="text"
-          maxlength="200"
-          placeholder="告诉我时间和人数，帮你找会议室"
-          :disabled="sending"
-          aria-label="对助手说"
-        />
-        <button type="submit" class="ai-buddy-send" :disabled="sending">
-          发送
-        </button>
-      </form>
     </div>
     <AgentDebugPanel
       v-if="debugEnabled"
@@ -196,13 +195,35 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from "vue";
 import { getAgentSuggestions } from "@/server/module/agent";
-import { applyAgentEvent, backFromConfirm, emptyAgentUi } from "../agent/applyEvent";
-import { appendDebugEntry, readDebugEnabled, writeDebugEnabled } from "../agent/debugLog";
+import {
+  applyAgentEvent,
+  backFromConfirm,
+  emptyAgentUi
+} from "../agent/applyEvent";
+import {
+  appendDebugEntry,
+  readDebugEnabled,
+  writeDebugEnabled
+} from "../agent/debugLog";
 import { streamTurn } from "../agent/streamTurn";
+import { isBuddyChrome } from "../agent/chrome";
+import { shouldShowBuddyPrompts } from "../agent/prompts";
 import { buildSuggestionTurnBody } from "../agent/suggestions";
-import { easeInOutCubic, lerpPose, morphSquash, poseFor } from "../agent/buddyPose";
+import {
+  easeInOutCubic,
+  lerpPose,
+  morphSquash,
+  poseFor
+} from "../agent/buddyPose";
 import { defaultBookingTitle } from "../defaultTitle";
 import { waitHintAt, waitHintsForAction } from "../agent/waitHints";
 import { getUserName } from "@/utils";
@@ -276,10 +297,39 @@ function pushClientDebug(cat, title, data) {
 }
 
 function onHotkey(event) {
-  if (!(event.altKey && event.shiftKey && event.code === "KeyD")) return;
+  if (event.altKey && event.shiftKey && event.code === "KeyD") {
+    event.preventDefault();
+    debugEnabled.value = !debugEnabled.value;
+    writeDebugEnabled(debugEnabled.value);
+    return;
+  }
+  if (event.key !== "Escape" || !dockOpen.value) return;
   event.preventDefault();
-  debugEnabled.value = !debugEnabled.value;
-  writeDebugEnabled(debugEnabled.value);
+  closeOpenDock({ restoreFocus: true });
+}
+
+function onDocPointerDown(event) {
+  if (!dockOpen.value || event.button !== 0) return;
+  if (isBuddyChrome(event.target)) return;
+  closeOpenDock({ restoreFocus: false });
+}
+
+/**
+ * @param {{ restoreFocus?: boolean }} [opts]
+ */
+function closeOpenDock({ restoreFocus = false } = {}) {
+  if (!dockOpen.value) return;
+  if (ui.value.card?.type === "booked") {
+    dismissBooked();
+  } else if (ui.value.sessionId || ui.value.card) {
+    dismiss();
+  } else {
+    abortInFlightTurn();
+    stopWait();
+    turnGen += 1;
+    dockOpen.value = false;
+  }
+  if (restoreFocus) nextTick(() => fabRef.value?.focus());
 }
 
 function abortInFlightTurn() {
@@ -318,6 +368,13 @@ function startWait(action) {
   waitTimer = setInterval(apply, 1100);
 }
 
+const showPrompts = computed(() =>
+  shouldShowBuddyPrompts({
+    dockOpen: dockOpen.value,
+    suggestions: suggestions.value
+  })
+);
+
 const bookedSummary = computed(() => {
   const card = ui.value.card;
   if (card?.type !== "booked") return "";
@@ -338,10 +395,12 @@ async function loadSuggestions() {
   suggestionsLoaded.value = false;
   try {
     const list = await getAgentSuggestions();
-    if (gen !== suggestionsGeneration || !dockOpen.value) return;
+    if (gen !== suggestionsGeneration) return;
     suggestions.value = Array.isArray(list) ? list : [];
   } catch {
-    if (gen === suggestionsGeneration) suggestions.value = [];
+    if (gen === suggestionsGeneration && !suggestions.value.length) {
+      suggestions.value = [];
+    }
   } finally {
     if (gen === suggestionsGeneration) suggestionsLoaded.value = true;
   }
@@ -487,7 +546,10 @@ function loop(ms) {
 function scheduleIdle() {
   window.clearTimeout(idleTimer);
   idleTimer = window.setTimeout(() => {
-    if (!dockOpen.value && (ui.value.expression === "happy" || ui.value.expression === "down")) {
+    if (
+      !dockOpen.value &&
+      (ui.value.expression === "happy" || ui.value.expression === "down")
+    ) {
       ui.value = { ...ui.value, expression: "idle" };
     }
   }, 1800);
@@ -496,7 +558,9 @@ function scheduleIdle() {
 watch(dockOpen, (open) => {
   if (open) {
     nextTick(() => inputRef.value?.focus());
+    return;
   }
+  loadSuggestions();
 });
 
 watch(
@@ -508,23 +572,13 @@ watch(
 
 function toggle() {
   if (dockOpen.value) {
-    if (ui.value.card?.type === "booked") {
-      dismissBooked();
-      return;
-    }
-    if (ui.value.sessionId || ui.value.card) {
-      dismiss();
-    } else {
-      abortInFlightTurn();
-      turnGen += 1;
-      dockOpen.value = false;
-    }
+    closeOpenDock({ restoreFocus: false });
     return;
   }
+  stopWait();
   const sessionId = ui.value.sessionId;
   ui.value = { ...emptyAgentUi(), sessionId };
   dockOpen.value = true;
-  loadSuggestions();
 }
 
 /**
@@ -537,18 +591,20 @@ function onEvent(event, gen) {
     debugEntries.value = appendDebugEntry(event.entry, debugEntries.value);
     return;
   }
-  if (event.type !== "status" && event.type !== "session" && event.type !== "debug") {
+  if (
+    event.type !== "status" &&
+    event.type !== "session" &&
+    event.type !== "debug"
+  ) {
     stopWait();
   }
   ui.value = applyAgentEvent(ui.value, event);
   if (event.type === "booked") {
-    clearSuggestions();
     emit("booked");
     dockOpen.value = true;
     return;
   }
   if (event.type === "closed") {
-    clearSuggestions();
     dockOpen.value = false;
     scheduleIdle();
     return;
@@ -602,8 +658,13 @@ function sendMessage() {
 }
 
 function startMessageTurn(body) {
-  suggestions.value = [];
-  ui.value = { ...ui.value, open: true, card: null, backCard: null, status: "" };
+  ui.value = {
+    ...ui.value,
+    open: true,
+    card: null,
+    backCard: null,
+    status: ""
+  };
   dockOpen.value = true;
   runTurn(body);
 }
@@ -612,7 +673,6 @@ function dismissBooked() {
   if (ui.value.card?.type !== "booked") return;
   abortInFlightTurn();
   turnGen += 1;
-  clearSuggestions();
   const sessionId = ui.value.sessionId;
   ui.value = { ...emptyAgentUi(), expression: "happy" };
   beginPose("happy");
@@ -663,7 +723,7 @@ function goBack() {
 
 function dismiss() {
   abortInFlightTurn();
-  clearSuggestions();
+  stopWait();
   const sessionId = ui.value.sessionId;
   ui.value = applyAgentEvent(ui.value, {
     type: "closed",
@@ -676,11 +736,9 @@ function dismiss() {
   const gen = ++turnGen;
   const ac = new AbortController();
   turnAbort = ac;
-  streamTurn(
-    { sessionId, action: "cancel" },
-    (e) => onEvent(e, gen),
-    { signal: ac.signal }
-  )
+  streamTurn({ sessionId, action: "cancel" }, (e) => onEvent(e, gen), {
+    signal: ac.signal
+  })
     .catch(() => {
       /* 本地已收起 */
     })
@@ -694,8 +752,10 @@ onMounted(() => {
   reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   window.addEventListener("pointermove", onPointerMove, { passive: true });
   document.addEventListener("pointerleave", onPointerLeave);
+  document.addEventListener("pointerdown", onDocPointerDown, true);
   window.addEventListener("keydown", onHotkey);
   raf = requestAnimationFrame(loop);
+  loadSuggestions();
 });
 
 onBeforeUnmount(() => {
@@ -708,6 +768,7 @@ onBeforeUnmount(() => {
   window.clearTimeout(morphClassTimer);
   window.removeEventListener("pointermove", onPointerMove);
   document.removeEventListener("pointerleave", onPointerLeave);
+  document.removeEventListener("pointerdown", onDocPointerDown, true);
   window.removeEventListener("keydown", onHotkey);
 });
 </script>

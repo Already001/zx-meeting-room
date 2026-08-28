@@ -365,6 +365,70 @@ test("weekly recurring expands within book-ahead and rolls back on conflict", ()
   if (!failSeries.ok) assert.equal(failSeries.code, "M4010");
 });
 
+test("dates payload books consecutive workdays in one transaction", () => {
+  const { db, roomId } = setup();
+  const res = createBooking(
+    db,
+    CORP,
+    host,
+    {
+      roomId,
+      date: "2026-08-27",
+      dates: ["2026-08-27", "2026-08-28"],
+      start: "09:00",
+      end: "18:00",
+      title: "全天对齐"
+    },
+    FROZEN
+  );
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.equal(res.value.items.length, 2);
+  assert.equal(res.value.items[0].date, "2026-08-27");
+  assert.equal(res.value.items[1].date, "2026-08-28");
+  assert.ok(res.value.seriesId);
+
+  const conflict = createBooking(
+    db,
+    CORP,
+    host,
+    {
+      roomId,
+      date: "2026-08-28",
+      dates: ["2026-08-28"],
+      start: "10:00",
+      end: "11:00"
+    },
+    FROZEN
+  );
+  assert.equal(conflict.ok, false);
+  if (!conflict.ok) assert.equal(conflict.code, "M4010");
+});
+
+test("dates cannot mix with repeatWeekly", () => {
+  const db = openMemoryDb();
+  ensureDefaultDicts(db, CORP);
+  const room = createRoom(db, CORP, { ...roomBase, allowRecurring: true, bookAheadDays: 7 });
+  assert.equal(room.ok, true);
+  if (!room.ok) return;
+  const res = createBooking(
+    db,
+    CORP,
+    host,
+    {
+      roomId: room.value.id,
+      date: "2026-08-27",
+      dates: ["2026-08-27", "2026-08-28"],
+      start: "10:00",
+      end: "11:00",
+      repeatWeekly: true
+    },
+    FROZEN
+  );
+  assert.equal(res.ok, false);
+  if (!res.ok) assert.equal(res.msg, "不能同时指定多日与每周重复");
+});
+
 test("repeatWeekly rejected when room disallows recurring", () => {
   const { db, roomId } = setup();
   const res = createBooking(

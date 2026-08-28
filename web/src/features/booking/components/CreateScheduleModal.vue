@@ -90,7 +90,10 @@
                 style="text-align: right"
               />
             </div>
-            <label v-if="room.allowRecurring" class="form-cell">
+            <label
+              v-if="room.allowRecurring && bookingDates.length < 2"
+              class="form-cell"
+            >
               <span class="form-cell-label">每周重复</span>
               <input
                 v-model="repeatWeekly"
@@ -115,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { createBooking } from "@/server/module/booking";
 import { createdCount } from "../mine";
 import { fromMinutes } from "../time";
@@ -127,6 +130,7 @@ const props = defineProps({
   rangeText: { type: String, required: true },
   dateLabel: { type: String, required: true },
   dateIso: { type: String, required: true },
+  dates: { type: Array, default: () => [] },
   start: { type: Number, required: true },
   end: { type: Number, required: true },
   fullScreen: { type: Boolean, default: false }
@@ -141,6 +145,9 @@ const submitting = ref(false);
 const formError = ref("");
 const hostName = getUserName() || "";
 const titlePlaceholder = defaultBookingTitle(hostName);
+const bookingDates = computed(() =>
+  props.dates?.length ? props.dates : [props.dateIso]
+);
 
 const handleSubmit = async () => {
   if (submitting.value) return;
@@ -152,18 +159,23 @@ const handleSubmit = async () => {
   submitting.value = true;
   try {
     const trimmed = title.value.trim();
+    const dates = bookingDates.value;
     const result = await createBooking({
       roomId: props.room.id,
-      date: props.dateIso,
+      date: dates[0],
+      dates: dates.length > 1 ? dates : undefined,
       start: fromMinutes(props.start),
       end: fromMinutes(props.end),
       title: trimmed || defaultBookingTitle(hostName),
       remark: remark.value.trim(),
-      repeatWeekly: Boolean(props.room.allowRecurring && repeatWeekly.value)
+      repeatWeekly: Boolean(
+        props.room.allowRecurring && repeatWeekly.value && dates.length < 2
+      )
     });
     emit("success", createdCount(result));
   } catch (error) {
-    formError.value = error.msg || error.message || "预定失败，请检查时段后重试";
+    formError.value =
+      error.msg || error.message || "预定失败，请检查时段后重试";
     showToastError(formError.value);
   } finally {
     submitting.value = false;

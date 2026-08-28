@@ -8,7 +8,9 @@
       @pointerdown.stop
     >
       <div class="tl-room-pop-head">
-        <div id="tl-room-pop-title" class="tl-room-pop-title">{{ room.name }}</div>
+        <div id="tl-room-pop-title" class="tl-room-pop-title">
+          {{ room.name }}
+        </div>
         <div class="tl-room-pop-icons" aria-hidden="true">
           <span class="tl-room-icon-btn"><RoomPhoneIcon /></span>
           <span class="tl-room-icon-btn"><RoomScreenIcon /></span>
@@ -82,7 +84,8 @@ const openLabel = computed(() => {
 });
 
 const aheadLabel = computed(
-  () => AHEAD_LABEL[props.room.bookAheadDays] || `${props.room.bookAheadDays}天内`
+  () =>
+    AHEAD_LABEL[props.room.bookAheadDays] || `${props.room.bookAheadDays}天内`
 );
 
 const noteText = computed(() => {

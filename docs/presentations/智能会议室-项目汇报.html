@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>智信 · 智能会议室 · 项目进展汇报</title>
+  <style>
+    :root {
+      --blue: #3E7EFF;
+      --blue-dk: #2E6BE6;
+      --ink: #1F2329;
+      --body: #5D616B;
+      --mute: #8F959E;
+      --canvas: #ffffff;
+      --soft: #F4F6F8;
+      --hair: #E1E5EB;
+      --primary-bg: #EBF2FF;
+      --ok: #1A9E6A;
+      --warn: #B36B00;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #d8dee8; color: var(--ink); font-family: "PingFang SC", "Microsoft YaHei", sans-serif; overflow: hidden; }
+    .progress { position: fixed; top: 0; left: 0; height: 3px; background: var(--blue); z-index: 20; width: 0; }
+    .deck {
+      position: absolute; inset: 0; margin: auto;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      background: var(--soft);
+      box-shadow: 0 16px 48px rgba(31, 35, 41, 0.12);
+    }
+    .slide {
+      position: absolute; inset: 0; padding: 48px 56px 56px;
+      display: none; flex-direction: column;
+    }
+    .slide.active { display: flex; }
+    .slide.cover, .slide.end { background: var(--canvas); }
+    .bar { position: absolute; left: 0; top: 0; width: 8px; height: 100%; background: var(--blue); }
+    .kicker { display: flex; align-items: center; gap: 10px; color: var(--blue); font-size: 13px; font-weight: 600; letter-spacing: 0.08em; }
+    .kicker::before { content: ""; width: 6px; height: 16px; background: var(--blue); border-radius: 2px; }
+    h1 { font-size: 32px; line-height: 1.25; margin: 10px 0 28px; }
+    .cover h1 { font-size: 48px; margin: 12px 0 16px; }
+    .sub { font-size: 18px; color: var(--body); line-height: 1.6; }
+    .meta { color: var(--blue); font-weight: 600; font-size: 15px; }
+    .foot {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 36px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 56px; color: var(--mute); font-size: 12px; background: rgba(244,246,248,.9);
+    }
+    .grid5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; flex: 1; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .card {
+      background: var(--canvas); border: 1px solid var(--hair); border-radius: 8px; padding: 20px 22px;
+    }
+    .num { color: var(--blue); font-size: 22px; font-weight: 700; }
+    .pain { display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: center; }
+    .pain strong { font-size: 18px; }
+    .card p, .list { color: var(--body); font-size: 15px; line-height: 1.7; }
+    .list { list-style: none; }
+    .list li { margin: 0 0 10px; }
+    .list li::before { content: "·  "; color: var(--blue); font-weight: 700; }
+    .arch { margin-top: 16px; }
+    .accent { height: 4px; background: var(--blue); border-radius: 2px 2px 0 0; margin: -20px -22px 16px; }
+    .ok { color: var(--ok); font-weight: 700; }
+    .warn { color: var(--warn); font-weight: 700; }
+    .nav {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 12px; align-items: center; z-index: 30;
+      background: rgba(31,35,41,.72); color: #fff; padding: 6px 10px; border-radius: 999px;
+    }
+    .nav button {
+      width: 32px; height: 32px; border: 0; border-radius: 50%;
+      background: rgba(255,255,255,.16); color: #fff; cursor: pointer;
+    }
+    .hint { position: fixed; top: 12px; right: 16px; font-size: 12px; color: #5D616B; z-index: 20; }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progressBar"></div>
+  <div class="hint">← → 翻页 · F 全屏</div>
+  <div class="deck">
+
+    <section class="slide cover active">
+      <div class="bar"></div>
+      <div style="margin:auto 0 auto 24px;">
+        <p class="meta">内部汇报 · 2026.08.28</p>
+        <h1>智信 · 智能会议室</h1>
+        <p class="sub">嵌入智信 PC / iOS / 安卓 WebView 的会议室预定与管理平台<br/>管理主数据 · 看板预定 · 对话找房 · 企业隔离</p>
+      </div>
+      <div class="foot"><span>项目进展汇报</span><span>约 12–15 分钟</span></div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">AGENDA</p>
+      <h1>今天讲五件事</h1>
+      <div class="grid5">
+        <div class="card"><div class="num">01</div><h3 style="margin:12px 0 8px">为什么做</h3><p>会议室难约、占用看不见、管理分散</p></div>
+        <div class="card"><div class="num">02</div><h3 style="margin:12px 0 8px">做成了什么</h3><p>管理端 + PC/移动预定 + 对话助手</p></div>
+        <div class="card"><div class="num">03</div><h3 style="margin:12px 0 8px">怎么做成的</h3><p>三入口 MPA、Hono API、SQLite 事务</p></div>
+        <div class="card"><div class="num">04</div><h3 style="margin:12px 0 8px">规则与边界</h3><p>强制校验、企业隔离、明确不做</p></div>
+        <div class="card"><div class="num">05</div><h3 style="margin:12px 0 8px">下一步</h3><p>审批/周期、提醒、正式身份</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">问题</p>
+      <h1>会议室预定，一直缺一张「真占用」图</h1>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card pain"><strong>看不见</strong><p>员工不知道哪间空、哪段被占，只能群里问、门口看。</p></div>
+        <div class="card pain"><strong>订不准</strong><p>口头占用、过期不放、重复预定，冲突靠事后协调。</p></div>
+        <div class="card pain"><strong>管不住</strong><p>房间主数据、设施、开放时间散落，停用/改名无法统一。</p></div>
+        <div class="card pain"><strong>端割裂</strong><p>PC 要看板，手机要轻操作，智信三端 WebView 不能各做一套。</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">目标</p>
+      <h1>一次交付：能管、能订、能释放、企业隔离</h1>
+      <div class="grid2">
+        <div class="card"><div class="num">01</div><h3 style="margin:10px 0">管理员</h3><p>会议室 CRUD、启停、建筑/设施字典（引用保护、改名回写）。</p></div>
+        <div class="card"><div class="num">02</div><h3 style="margin:10px 0">员工 PC</h3><p>时间轴看板，30 分钟粒度拖选，看占用、订、提前释放。</p></div>
+        <div class="card"><div class="num">03</div><h3 style="margin:10px 0">员工移动</h3><p>列表 + 迷你时间条，弹层完成筛选、预定、我的预定。</p></div>
+        <div class="card"><div class="num">04</div><h3 style="margin:10px 0">服务端</h3><p>启用房间、开放时间、不可订过去、提前天数、占用事务不重叠。</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">架构</p>
+      <h1>三入口前端 + 一套 /meetingApi</h1>
+      <div class="grid3">
+        <div class="card" style="text-align:center"><div class="num">main</div><p style="margin:8px 0">独立浏览器 /meeting/</p><strong>看板 + 管理</strong></div>
+        <div class="card" style="text-align:center"><div class="num">zx</div><p style="margin:8px 0">PC WebView /meeting/zx/</p><strong>看板 + 管理</strong></div>
+        <div class="card" style="text-align:center"><div class="num">m</div><p style="margin:8px 0">iOS / 安卓 /meeting/m/</p><strong>仅预定弹层</strong></div>
+      </div>
+      <div class="card arch">
+        <p style="color:var(--mute);font-size:13px;font-weight:600;margin-bottom:8px">请求链路</p>
+        <p>pages 薄封装 → features/admin | booking | demo → server/module/*.js → axios /meetingApi<br/>
+        Hono：/health 无头；读看板要 zxCorpId；写预定要企业+用户；写房间/字典要管理员白名单<br/>
+        身份：URL query → bootstrapAuthFromUrl → sessionStorage → 请求头（后端本期不验 JWT）</p>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">预定端</p>
+      <h1>同一套占用规则，两套交互</h1>
+      <div class="grid3" style="flex:1">
+        <div class="card"><div class="accent"></div><h3>PC 时间轴</h3><ul class="list" style="margin-top:12px"><li>00:00–24:00 全天轴</li><li>拖选后确认再填主题</li><li>筛选：地点 / 人数 / 设施</li><li>管理员入口「会议室管理」</li></ul></div>
+        <div class="card"><div class="accent"></div><h3>移动预定</h3><ul class="list" style="margin-top:12px"><li>迷你条 07:00–23:00</li><li>底栏「预定」直达表单</li><li>详情 / 占用 / 我的预定均为弹层</li><li>m 入口无管理路由</li></ul></div>
+        <div class="card"><div class="accent"></div><h3>共同能力</h3><ul class="list" style="margin-top:12px"><li>14 天日期轴（上海时区）</li><li>30 分钟对齐，半开区间</li><li>我的预定：进行中 / 待开始</li><li>主持人可提前释放</li></ul></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">管理端</p>
+      <h1>房间主数据 + 字典，白名单才能进</h1>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card pain"><strong style="color:var(--blue)">会议室</strong><p>名称、建筑、楼层 1–20、容量、设施、开放时间、提前天数、启停</p></div>
+        <div class="card pain"><strong style="color:var(--blue)">字典</strong><p>建筑 / 设施；有引用不可删；改名回写房间；停用后表单不再出现</p></div>
+        <div class="card pain"><strong style="color:var(--blue)">权限</strong><p>MEETING_ADMIN_USER_IDS 精确匹配 userId；空名单 = 无人是管理员</p></div>
+        <div class="card pain"><strong style="color:var(--blue)">预定历史</strong><p>管理员可查本企业预定；员工仅释放自己的未结束占用</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">业务规则</p>
+      <h1>冲突在库里挡，不靠前端运气</h1>
+      <div class="grid4">
+        <div class="card" style="text-align:center"><div class="num">30′</div><h3 style="margin:8px 0">粒度</h3><p>对齐 30 分钟，最短 30 分钟，区间 [start, end)</p></div>
+        <div class="card" style="text-align:center"><div class="num">Tx</div><h3 style="margin:8px 0">占用</h3><p>查重叠与插入同一事务，并发订同一空档后到者失败</p></div>
+        <div class="card" style="text-align:center"><div class="num">TZ</div><h3 style="margin:8px 0">时区</h3><p>一律 Asia/Shanghai 墙钟，不用 UTC 日期直接比</p></div>
+        <div class="card" style="text-align:center"><div class="num">Corp</div><h3 style="margin:8px 0">隔离</h3><p>corp_id 贯穿；跨企业 id 统一「不存在」</p></div>
+      </div>
+      <div class="card" style="margin-top:16px"><p>服务端还会拒绝：已停用房间、不在开放时间、今天已过的格子、超出提前天数（7/30/90/180）。前端 Toast 对齐同一套中文文案。</p></div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">对话助手</p>
+      <h1>用自然语言找空档，确认后再落库</h1>
+      <div class="grid4" style="flex:1">
+        <div class="card" style="text-align:center"><div class="num">1</div><h3 style="margin:10px 0">建议</h3><p>GET /agent/suggestions<br/>根据占用生成可点快捷句</p></div>
+        <div class="card" style="text-align:center"><div class="num">2</div><h3 style="margin:10px 0">对话</h3><p>POST /agent/turn SSE<br/>接 LLM，受频控与密钥配置</p></div>
+        <div class="card" style="text-align:center"><div class="num">3</div><h3 style="margin:10px 0">确认</h3><p>选时段 / 填主题<br/>走与看板相同的预定校验</p></div>
+        <div class="card" style="text-align:center"><div class="num">4</div><h3 style="margin:10px 0">落库</h3><p>同一套 booking 事务<br/>助手不能绕过占用规则</p></div>
+      </div>
+      <p style="margin-top:16px;color:var(--mute)">未配置 MEETING_LLM_* 时助手不可用，预定主路径不受影响。</p>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">演示与身份</p>
+      <h1>本地选人门户；生产由智信带参进入</h1>
+      <div class="grid2">
+        <div class="card"><h3>演示企业</h3><p style="margin-top:12px">智信科技 zx-001<br/>李明（管理员）/ 张伟 / 王芳<br/><br/>示例集团 acme-001<br/>赵强（管理员）/ 陈晨<br/><br/>两家种子房间互不可见；启动时空库才写入。</p></div>
+        <div class="card"><h3>身份流</h3><p style="margin-top:12px">无 corpId / userId → 演示首页<br/>点击用户 → 拼 query 进当前入口<br/>bootstrapAuthFromUrl 落盘并剥参<br/>「切换用户」清身份回门户<br/>智信带齐参数时不出现演示页</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">工程</p>
+      <h1>pnpm workspace，部署 base 固定 /meeting/</h1>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card pain"><strong style="color:var(--blue)">前端</strong><p>Vue 3 + Vite 7 MPA · UnoCSS · Element Plus / Vant 按需</p></div>
+        <div class="card pain"><strong style="color:var(--blue)">后端</strong><p>Hono + TypeScript · better-sqlite3 WAL · 端口 3100</p></div>
+        <div class="card pain"><strong style="color:var(--blue)">身份</strong><p>query / 头：corpId、userId、userName、dept；不引入 Pinia</p></div>
+        <div class="card pain"><strong style="color:var(--blue)">质量</strong><p>server 单测 + web node:test · 构建含 tsc / vue-tsc · Prettier</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">进度</p>
+      <h1>本期已交付 vs 明确不做</h1>
+      <div class="grid2">
+        <div class="card"><p class="ok">已交付</p><ul class="list" style="margin-top:12px"><li>房间 / 字典管理与引用保护</li><li>PC 看板 + 移动预定 + 释放</li><li>占用事务与全套校验文案</li><li>管理员预定查询与审计</li><li>对话助手（可配置关闭）</li><li>多企业演示种子与选人首页</li><li>三入口同步、/meeting/ 部署</li></ul></div>
+        <div class="card"><p class="warn">明确不做（本期）</p><ul class="list" style="margin-top:12px"><li>JWT 验签 / JSBridge 完整接入</li><li>审批流、周期会议、抢占</li><li>参会人、日历邀请、提醒推送</li><li>多实例共享同一 SQLite</li><li>物理删除会议室</li><li>钉钉硬件 / 真实投屏</li><li>移动端管理界面</li></ul></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <p class="kicker">下一步</p>
+      <h1>建议按「身份 → 协同 → 规模」排期</h1>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card pain"><strong style="color:var(--blue)">P1 身份</strong><p>智信入口正式带参验收；管理白名单与组织对齐；助手密钥走配置中心。</p></div>
+        <div class="card pain"><strong style="color:var(--blue)">P2 协同</strong><p>审批开关真正跑起来；周期预定展开；开始前 15 分钟提醒落地。</p></div>
+        <div class="card pain"><strong style="color:var(--blue)">P3 规模</strong><p>若多实例：SQLite 迁出或只读副本；审计与用量可观测。</p></div>
+      </div>
+    </section>
+
+    <section class="slide end">
+      <div class="bar"></div>
+      <div style="margin:auto 0 auto 24px;">
+        <h1 style="font-size:48px">谢谢</h1>
+        <p class="sub">欢迎现场走查：演示首页选人 → PC 看板拖选 → 移动预定 → 管理端改字典</p>
+        <p style="margin-top:16px;color:var(--mute)">本地：pnpm dev · 看板 /meeting/ · API /meetingApi</p>
+        <p style="margin-top:48px;color:var(--blue);font-size:22px;font-weight:700">Q &amp; A</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="nav">
+    <button type="button" onclick="prevSlide()">←</button>
+    <span id="counter">1 / 14</span>
+    <button type="button" onclick="nextSlide()">→</button>
+  </div>
+  <script>
+    let current = 1;
+    const slides = document.querySelectorAll(".slide");
+    const total = slides.length;
+    function show(n) {
+      current = Math.min(Math.max(n, 1), total);
+      slides.forEach((s, i) => s.classList.toggle("active", i === current - 1));
+      document.getElementById("counter").textContent = current + " / " + total;
+      document.getElementById("progressBar").style.width = (current / total * 100) + "%";
+    }
+    function nextSlide() { show(current + 1); }
+    function prevSlide() { show(current - 1); }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); nextSlide(); }
+      if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); prevSlide(); }
+      if (e.key === "f" || e.key === "F") document.documentElement.requestFullscreen?.();
+    });
+    show(1);
+  </script>
+</body>
+</html>

@@ -9,7 +9,8 @@ export const roomMatchesFilters = (room, filters, keyword = "") => {
   if (filters.capacity !== "all") {
     const option = CAPACITY_OPTIONS.find((c) => c.id === filters.capacity);
     if (option && option.min !== undefined) {
-      if (room.capacity < option.min || room.capacity > option.max) return false;
+      if (room.capacity < option.min || room.capacity > option.max)
+        return false;
     }
   }
   if (

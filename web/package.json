@@ -15,7 +15,7 @@
     "build:prod": "rm -rf dist && vue-tsc && pnpm run build:main:prod && pnpm run build:zx:prod && pnpm run build:mobile:prod && node mergeDist.js",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
-    "test": "node --test src/features/booking/tests/*.test.js",
+    "test": "node --test src/features/**/tests/*.test.js",
     "format": "prettier --write src/"
   },
   "dependencies": {

@@ -15,11 +15,7 @@
             <span>当天占用</span>
             <span>{{ room.openStart }}–{{ room.openEnd }}</span>
           </div>
-          <div
-            class="ai-buddy-mini"
-            role="img"
-            :aria-label="occLabel(room)"
-          >
+          <div class="ai-buddy-mini" role="img" :aria-label="occLabel(room)">
             <span
               v-for="(seg, i) in miniSegments(room)"
               :key="`${room.roomId}-${i}`"
@@ -29,8 +25,7 @@
             />
           </div>
           <p class="ai-buddy-occ-legend">
-            <i class="is-busy" />已订
-            <i class="is-free" />空闲
+            <i class="is-busy" />已订 <i class="is-free" />空闲
           </p>
         </div>
         <div class="ai-buddy-slot-btns">
@@ -43,7 +38,9 @@
             :aria-label="`选择 ${slot.start} 到 ${slot.end}`"
             @click="emit('pick', slot)"
           >
-            <span class="ai-buddy-slot-time">{{ slot.start }}–{{ slot.end }}</span>
+            <span class="ai-buddy-slot-time"
+              >{{ slot.start }}–{{ slot.end }}</span
+            >
             <span class="ai-buddy-slot-cta">选这个</span>
           </button>
         </div>

@@ -62,6 +62,8 @@ export type BookingPayload = {
   title?: string;
   remark?: string | null;
   repeatWeekly?: boolean;
+  /** 一次性多日（如周一至周五全天），与 repeatWeekly 互斥 */
+  dates?: string[];
 };
 
 export type BoardEvent = {
@@ -356,12 +358,26 @@ export const createBooking = (
     const first = validateSlot(room, payload, now, user.userName);
     if (!first.ok) return first;
 
-    const dates = payload.repeatWeekly
-      ? weeklyDatesUntil(first.value.date, addDays(now.date, room.book_ahead_days))
-      : [first.value.date];
+    const listed = Array.isArray(payload.dates) ? payload.dates.filter(Boolean) : [];
+    if (payload.repeatWeekly && listed.length) {
+      return { ok: false, code: "M4000", msg: "不能同时指定多日与每周重复" };
+    }
     if (payload.repeatWeekly && !room.allow_recurring) {
       return { ok: false, code: "M4000", msg: "该会议室不允许循环预定" };
     }
+    if (listed.some((d) => !isDate(d))) {
+      return { ok: false, code: "M4000", msg: "请选择日期" };
+    }
+    const uniqueListed = [...new Set(listed)].sort();
+    if (uniqueListed.length > 5) {
+      return { ok: false, code: "M4000", msg: "一次最多预定 5 天" };
+    }
+
+    const dates = payload.repeatWeekly
+      ? weeklyDatesUntil(first.value.date, addDays(now.date, room.book_ahead_days))
+      : uniqueListed.length
+        ? uniqueListed
+        : [first.value.date];
     if (dates.length === 0) return { ok: false, code: "M4000", msg: "请选择日期" };
 
     const slots: SlotOk[] = [];

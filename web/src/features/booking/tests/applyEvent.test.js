@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { emptyAgentUi, applyAgentEvent, backFromConfirm } from "../agent/applyEvent.js";
+import {
+  emptyAgentUi,
+  applyAgentEvent,
+  backFromConfirm
+} from "../agent/applyEvent.js";
 
 const queryEvent = {
   type: "query",

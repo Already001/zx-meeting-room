@@ -199,7 +199,7 @@
       <button
         type="button"
         class="pc-icon-btn"
-        title="前一天"
+        :title="viewMode === 'week' ? '上一周' : '前一天'"
         @click="emit('prevDay')"
       >
         <svg
@@ -226,7 +226,7 @@
       <button
         type="button"
         class="pc-icon-btn"
-        title="后一天"
+        :title="viewMode === 'week' ? '下一周' : '后一天'"
         @click="emit('nextDay')"
       >
         <svg
@@ -243,17 +243,34 @@
           <polyline points="9 18 15 12 9 6" />
         </svg>
       </button>
-      <span class="pc-view-chip" title="目前仅支持日视图">日</span>
+      <div class="pc-view-switch" role="radiogroup" aria-label="视图">
+        <button
+          type="button"
+          class="pc-view-chip"
+          role="radio"
+          :aria-checked="viewMode === 'day'"
+          :class="{ active: viewMode === 'day' }"
+          @click="emit('changeView', 'day')"
+        >
+          日
+        </button>
+        <button
+          type="button"
+          class="pc-view-chip"
+          role="radio"
+          :aria-checked="viewMode === 'week'"
+          :class="{ active: viewMode === 'week' }"
+          title="工作日拖选时段，可跨天"
+          @click="emit('changeView', 'week')"
+        >
+          周
+        </button>
+      </div>
 
       <div class="pc-toolbar-end pc-toolbar-checks">
-        <label class="pc-check">
-          <input
-            type="checkbox"
-            :checked="showHost"
-            @change="emit('toggleHost')"
-          />
-          显示预定人
-        </label>
+        <button type="button" class="pc-link-btn" @click="emit('switchUser')">
+          切换用户
+        </button>
         <button
           v-if="isAdmin"
           type="button"
@@ -279,9 +296,9 @@ const props = defineProps({
   places: { type: Array, default: () => [] },
   facilityOptions: { type: Array, default: () => [] },
   capacityOptions: { type: Array, default: () => [] },
-  showHost: { type: Boolean, default: false },
   isAdmin: { type: Boolean, default: false },
-  mineOpen: { type: Boolean, default: false }
+  mineOpen: { type: Boolean, default: false },
+  viewMode: { type: String, default: "day" }
 });
 
 const emit = defineEmits([
@@ -292,9 +309,10 @@ const emit = defineEmits([
   "today",
   "update:filters",
   "reset",
-  "toggleHost",
   "openMine",
-  "admin"
+  "admin",
+  "switchUser",
+  "changeView"
 ]);
 
 const openMenu = ref(null);

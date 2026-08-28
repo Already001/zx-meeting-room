@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
+import { ensureDemoCorps } from "./domain/demoSeed.js";
 
 const dataDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "../data");
 const dbPath = path.join(dataDir, "meeting.sqlite");
@@ -132,6 +133,7 @@ export const getDb = (): Database.Database => {
   db.pragma("busy_timeout = 5000");
   db.pragma("foreign_keys = ON");
   ensureSchema(db);
+  ensureDemoCorps(db);
   singleton = db;
   return db;
 };

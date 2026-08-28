@@ -5,6 +5,9 @@
         <button type="button" class="m-action-btn" @click="emit('openMine')">
           我的预定
         </button>
+        <button type="button" class="m-action-btn" @click="emit('switchUser')">
+          切换用户
+        </button>
         <button
           type="button"
           class="m-action-btn m-action-cancel"
@@ -18,5 +21,5 @@
 </template>
 
 <script setup>
-defineEmits(["openMine", "close"]);
+defineEmits(["openMine", "switchUser", "close"]);
 </script>

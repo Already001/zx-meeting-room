@@ -23,5 +23,9 @@ test("waitHintsForAction has distinct copy per action", () => {
   assert.equal(waitHintsForAction("pick_slot"), PICK_WAIT_HINTS);
   assert.equal(waitHintsForAction("confirm"), CONFIRM_WAIT_HINTS);
   assert.ok(MESSAGE_WAIT_HINTS.length >= 3);
-  assert.ok(CONFIRM_WAIT_HINTS.some((h) => h.expression !== MESSAGE_WAIT_HINTS[0].expression));
+  assert.ok(
+    CONFIRM_WAIT_HINTS.some(
+      (h) => h.expression !== MESSAGE_WAIT_HINTS[0].expression
+    )
+  );
 });

@@ -186,6 +186,7 @@
     <MobileMoreSheet
       v-if="showMore"
       @open-mine="openMine"
+      @switch-user="switchDemoUser"
       @close="showMore = false"
     />
 
@@ -237,7 +238,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { releaseBooking } from "@/server/module/booking";
-import { getUserId, showToastError, showToastSuccess } from "@/utils";
+import { switchDemoUser } from "@/features/demo/session";
 import { useBoard } from "./useBoard";
 import { useMine } from "./useMine";
 import { extendSlotEnd, fromMinutes, shanghaiToday } from "./time";
@@ -360,10 +361,11 @@ const handleBookingSuccess = async (count = 1) => {
   detailRoom.value = null;
   selection.value = null;
   showToastSuccess(
-    count > 1 ? `已预定 ${count} 场，可在「我的预定」查看` : "预定成功，已加入「我的预定」"
+    count > 1
+      ? `已预定 ${count} 场，可在「我的预定」查看`
+      : "预定成功，已加入「我的预定」"
   );
-  mine.open.value = true;
-  await Promise.all([reload(), mine.reload()]);
+  await reload();
 };
 
 const handleBookFromDetail = (room) => {

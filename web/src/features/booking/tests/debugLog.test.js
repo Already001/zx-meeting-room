@@ -15,7 +15,11 @@ test("appendDebugEntry prepends and caps length", () => {
   const twice = appendDebugEntry(second, once);
   assert.equal(twice[0].id, "b");
   assert.equal(twice[1].id, "a");
-  const capped = appendDebugEntry(first, Array.from({ length: 200 }, (_, i) => ({ id: String(i) })), 200);
+  const capped = appendDebugEntry(
+    first,
+    Array.from({ length: 200 }, (_, i) => ({ id: String(i) })),
+    200
+  );
   assert.equal(capped.length, 200);
   assert.equal(capped[0].id, "a");
 });
